@@ -5,7 +5,7 @@ from   vic_pkg import *
 import bus_logger as bl
 import numpy as np
 import openpyxl as xl
-from   openpyxl.styles import PatternFill, Alignment
+from   openpyxl.styles import PatternFill, Alignment, Font
 
 MAX_HRES = 504
 MAX_VRES = 312
@@ -28,7 +28,7 @@ class FrameRenderXl(Entity):
 		self.sh.title = "Frame Dump"
 
 		self.color = [
-			"000000", # black
+			"010101", # black
 			"ffffff", # white
 			"9f4e44", # red
 			"6abfc6", # cyan
@@ -46,6 +46,24 @@ class FrameRenderXl(Entity):
 			"adadad"  # light grey
 		]
 
+		self.color_txt = [
+			"ffffff", # black
+			"010101", # white
+			"ffffff", # red
+			"010101", # cyan
+			"ffffff", # purple
+			"ffffff", # green
+			"ffffff", # blue
+			"010101", # yellow
+			"010101", # orange
+			"ffffff", # brown
+			"010101", # pink
+			"ffffff", # dark grey
+			"010101", # grey
+			"010101", # light green
+			"010101", # light blue
+			"010101"  # light grey
+		]
 
 	def _run(self):
 		if self.i_clk.negedge():
@@ -62,11 +80,14 @@ class FrameRenderXl(Entity):
 						self.ypos = 0
 
 				color = self.color[self.i_colr.now]
+				color_txt = self.color_txt[self.i_colr.now]
+				font = Font(name="Consolas", color=color_txt, bold=True)
 				fill = PatternFill(start_color=color, end_color=color, fill_type='solid')
 				alignment = Alignment(horizontal="left", vertical="top")
 
-				self.sh.cell(row=self.ypos+1, column=self.xpos+1, value= "\n" + "\n".join(bl.log))
+				self.sh.cell(row=self.ypos+1, column=self.xpos+1, value= "     \n" + "\n".join(bl.log))
 				self.sh.cell(row=self.ypos+1, column=self.xpos+1).fill = fill
+				self.sh.cell(row=self.ypos+1, column=self.xpos+1).font = font
 				self.sh.cell(row=self.ypos+1, column=self.xpos+1).alignment = alignment
 				bl.clear()
 
@@ -85,7 +106,7 @@ class FrameRenderXl(Entity):
 		# Adjusting cell width
 		for col in self.sh.columns:
 			for cell in col:
-				self.sh.column_dimensions[cell.column_letter].width = cell_size / 6  # Rough estimation of character width
+				self.sh.column_dimensions[cell.column_letter].width = cell_size / 5  # Rough estimation of character width
 
 		# Adjusting cell height
 		for row in self.sh.rows:

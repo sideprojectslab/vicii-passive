@@ -165,9 +165,9 @@ class Sync(Entity):
 			self.o_lock.nxt <<= int(self.state.now == ST_LOCKED)
 
 			if self.state.now == ST_LOCKED:
-				bl.add(f"X-RASTER = {self.o_xpos.now}")
-				bl.add(f"Y-RASTER = {self.o_ypos.now}")
-				bl.add(f"CYCLE    = {self.o_cycl.now}")
+				bl.add(f"X-RASTER = {self.o_xpos.now.val}")
+				bl.add(f"Y-RASTER = {self.o_ypos.now.val}")
+				bl.add(f"CYCLE    = {self.o_cycl.now.val}")
 
 			if self.i_rst.now:
 				self.state.nxt        <<= ST_LOCKED

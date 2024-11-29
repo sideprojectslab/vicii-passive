@@ -56,7 +56,7 @@ class VicTest(Entity):
 		yield from posedge(self.clk)
 		self.rst.nxt <<= 0
 
-		for _ in range(1):
+		for _ in range(2):
 			for l in self.lines:
 				yield from posedge(self.clk)
 				line_val = int(l.split()[1])
@@ -71,11 +71,11 @@ class VicTest(Entity):
 
 
 if __name__ == "__main__":
-	SimpleSim.vcd_path = get_abs_path("waves.vcd")
+	SimpleSim.vcd_path = get_abs_path("output/waves.vcd")
 	SimpleSim.vcd_timescale = "ns"
 	SimpleSim.vcd_live = False
 	testcase = VicTest()
 	SimpleSim.run(testcase)
 
 	testcase.renderxl.save("output/frame_analysis.xlsx")
-	input("Press any key to exit simulation")
+	input('Press "Enter" to terminate the test')

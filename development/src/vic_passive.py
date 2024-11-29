@@ -133,7 +133,7 @@ class VicPassive(Entity):
 		self.e_gfx_gen.o_bgnd  >> self.grfx_bgnd
 
 		# graphics mux
-		self.e_gfx_mux = GraphicsMux(g_mark_lines = True)
+		self.e_gfx_mux = GraphicsMux(g_mark_lines = False)
 		self.e_gfx_mux.i_clk       << self.i_clk
 		self.e_gfx_mux.i_rst       << self.i_rst
 		self.e_gfx_mux.i_specs     << self.specs
