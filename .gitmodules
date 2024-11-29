@@ -1,0 +1,3 @@
+[submodule "resources/ezhdl"]
+	path = resources/ezhdl
+	url = https://github.com/sideprojectslab/ezhdl.git
