@@ -4,14 +4,14 @@ sys.dont_write_bytecode = True
 from ezpath import *
 
 add_rel_path("../src")
-add_rel_path("../lib")
+add_rel_path("../../resources/ezhdl")
 
 from ezhdl           import *
 from vic_passive     import *
 from frame_render    import *
 from frame_render_xl import *
 
-input_path  = get_abs_path("frame_dump.txt")
+input_path  = get_abs_path("input/frame_dump.txt")
 
 class VicTest(Entity):
 	def __init__(self):
@@ -77,5 +77,5 @@ if __name__ == "__main__":
 	testcase = VicTest()
 	SimpleSim.run(testcase)
 
-	testcase.renderxl.save("frame_analysis.xlsx")
+	testcase.renderxl.save("output/frame_analysis.xlsx")
 	input("Press any key to exit simulation")

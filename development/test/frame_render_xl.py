@@ -82,12 +82,12 @@ class FrameRenderXl(Entity):
 		cell_size = 12
 		print("Saving excel dump")
 
-		print("Adjusting cell width")
+		# Adjusting cell width
 		for col in self.sh.columns:
 			for cell in col:
 				self.sh.column_dimensions[cell.column_letter].width = cell_size / 6  # Rough estimation of character width
 
-		print("Adjusting cell height")
+		# Adjusting cell height
 		for row in self.sh.rows:
 			for cell in row:
 				self.sh.row_dimensions[cell.row].height = cell_size  # Set height in pixels
