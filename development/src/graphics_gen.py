@@ -63,11 +63,11 @@ class GraphicsGen(Entity):
 
 	def _run(self):
 		if self.i_clk.posedge():
-			v = self.s.now
+			v = local(self.s)
 
-			ecm = self.i_regs.now[17][6]
-			bmm = self.i_regs.now[17][5]
-			mcm = self.i_regs.now[22][4]
+			ecm = self.i_regs[17][6]
+			bmm = self.i_regs[17][5]
+			mcm = self.i_regs[22][4]
 
 			if(ecm == 0) and (bmm == 0) and (mcm == 0):
 				mode = MODE.STD_TEXT
@@ -83,18 +83,18 @@ class GraphicsGen(Entity):
 				mode = MODE.INVALID
 
 			# serializer
-			if (self.i_strb.now & 1):
+			if (self.i_strb & 1):
 				v.shreg_mc[1:] <<= v.shreg_mc[0:-1]
 				v.shreg_sc     <<= v.shreg_sc << 1
 
 				# operate with a 1-pixel delay like the border unit, so that the outputs
 				# of the two modules are aligned
-				if (self.i_strb.now == 1):
+				if (self.i_strb == 1):
 					v.loaded  <<= 0
-					v.xscroll <<= self.i_regs.now[22][3:0]
-					v.data    <<= self.i_data.now
-					v.grfx    <<= self.i_grfx.now
-					v.en      <<= self.i_en.now
+					v.xscroll <<= self.i_regs[22][3:0]
+					v.data    <<= self.i_data
+					v.grfx    <<= self.i_grfx
+					v.en      <<= self.i_en
 
 				if (v.en == 1) and (v.xscroll == 0) and not v.loaded:
 					v.loaded <<= 1
@@ -116,13 +116,13 @@ class GraphicsGen(Entity):
 
 				v.gfx_colr <<= Array([t_vic_colr]*4)
 				if (v.mode == MODE.STD_TEXT):
-					v.gfx_colr[0] <<= self.i_regs.now[33][4:0]
+					v.gfx_colr[0] <<= self.i_regs[33][4:0]
 					v.gfx_colr[1] <<= v.data[12:8]
 
 				elif (v.mode == MODE.MCL_TEXT):
-					v.gfx_colr[0] <<= self.i_regs.now[33][4:0]
-					v.gfx_colr[1] <<= self.i_regs.now[34][4:0]
-					v.gfx_colr[2] <<= self.i_regs.now[35][4:0]
+					v.gfx_colr[0] <<= self.i_regs[33][4:0]
+					v.gfx_colr[1] <<= self.i_regs[34][4:0]
+					v.gfx_colr[2] <<= self.i_regs[35][4:0]
 					v.gfx_colr[3] <<= v.data[11:8]
 
 				elif (v.mode ==  MODE.STD_BMAP):
@@ -130,7 +130,7 @@ class GraphicsGen(Entity):
 					v.gfx_colr[1] <<= v.data[8:4]
 
 				elif (v.mode == MODE.MCL_BMAP):
-					v.gfx_colr[0] <<= self.i_regs.now[33][4:0]
+					v.gfx_colr[0] <<= self.i_regs[33][4:0]
 					v.gfx_colr[1] <<= v.data[8:4]
 					v.gfx_colr[2] <<= v.data[4:0]
 					v.gfx_colr[3] <<= v.data[12:8]
@@ -138,51 +138,51 @@ class GraphicsGen(Entity):
 				elif (mode == MODE.ECM_TEXT):
 					match v.bg_sel:
 						case 0b00:
-							v.gfx_colr[0] <<= self.i_regs.now[33][4:0]
+							v.gfx_colr[0] <<= self.i_regs[33][4:0]
 						case 0b01:
-							v.gfx_colr[0] <<= self.i_regs.now[34][4:0]
+							v.gfx_colr[0] <<= self.i_regs[34][4:0]
 						case 0b10:
-							v.gfx_colr[0] <<= self.i_regs.now[35][4:0]
+							v.gfx_colr[0] <<= self.i_regs[35][4:0]
 						case 0b11:
-							v.gfx_colr[0] <<= self.i_regs.now[36][4:0]
+							v.gfx_colr[0] <<= self.i_regs[36][4:0]
 
 					v.gfx_colr[1] <<= v.data[12:8]
 
 				if (v.mode == MODE.STD_TEXT):
 					if v.shreg_sc[SHREG_LEN - 1] == 0:
-						self.o_colr.nxt <<= v.gfx_colr[0]
-						self.o_bgnd.nxt <<= 1
+						self.o_colr <<= v.gfx_colr[0]
+						self.o_bgnd <<= 1
 					else:
-						self.o_colr.nxt <<= v.gfx_colr[1]
-						self.o_bgnd.nxt <<= 0
+						self.o_colr <<= v.gfx_colr[1]
+						self.o_bgnd <<= 0
 
 				elif (v.mode == MODE.MCL_TEXT):
 					if (v.mc_flag):
-						self.o_colr.nxt <<= v.gfx_colr[v.shreg_mc[-1]]
-						self.o_bgnd.nxt <<= not v.shreg_mc[-1][1]
+						self.o_colr <<= v.gfx_colr[v.shreg_mc[-1]]
+						self.o_bgnd <<= not v.shreg_mc[-1][1]
 					elif v.shreg_sc[-1] == 0:
-						self.o_colr.nxt <<= v.gfx_colr[0]
-						self.o_bgnd.nxt <<= 1
+						self.o_colr <<= v.gfx_colr[0]
+						self.o_bgnd <<= 1
 					else:
-						self.o_colr.nxt <<= v.gfx_colr[3]
-						self.o_bgnd.nxt <<= 0
+						self.o_colr <<= v.gfx_colr[3]
+						self.o_bgnd <<= 0
 
 				elif (v.mode == MODE.STD_BMAP) or (v.mode == MODE.ECM_TEXT):
 					if v.shreg_sc[-1] == 0:
-						self.o_colr.nxt <<= v.gfx_colr[0]
+						self.o_colr <<= v.gfx_colr[0]
 					else:
-						self.o_colr.nxt <<= v.gfx_colr[1]
-					self.o_bgnd.nxt <<= not v.shreg_sc[-1]
+						self.o_colr <<= v.gfx_colr[1]
+					self.o_bgnd <<= not v.shreg_sc[-1]
 
 				elif (v.mode == MODE.MCL_BMAP):
-					self.o_colr.nxt <<= v.gfx_colr[v.shreg_mc[-1]]
-					self.o_bgnd.nxt <<= not v.shreg_mc[-1][1]
+					self.o_colr <<= v.gfx_colr[v.shreg_mc[-1]]
+					self.o_bgnd <<= not v.shreg_mc[-1][1]
 
 				else:
-					self.o_colr.nxt <<= self.o_colr.now
-					self.o_bgnd.nxt <<= 1
+					self.o_colr <<= self.o_colr
+					self.o_bgnd <<= 1
 
-			self.s.nxt <<= v
+			self.s <<= v
 
-			if self.i_rst.now:
-				self.s.nxt.loaded <<= 0
+			if self.i_rst:
+				self.s.loaded <<= 0

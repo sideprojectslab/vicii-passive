@@ -145,7 +145,7 @@ def get_video_mode(ecm, bmm, mcm):
 def reg_write_analyze(reg, val, regs=t_vic_regs):
 	ret = []
 	name = REG_NAMES[reg]
-	ret.append(f"Register {name} Write: {val}")
+	ret.append(f"[REGISTER] {name} Write: {val}")
 
 	if reg in range(0, 16, 2):
 		idx = reg // 2

@@ -50,60 +50,66 @@ class Border(Entity):
 
 	def _run(self):
 		if self.i_clk.posedge():
-			specs = self.i_specs.now
 
-			reg_ec   = self.i_regs.now[32][4:0]
-			reg_rsel = self.i_regs.now[17][3]
-			reg_csel = self.i_regs.now[22][3]
-			reg_den  = self.i_regs.now[17][4]
+			specs   = local(self.i_specs)
+			ff_main = local(self.ff_main)
+			ff_vert = local(self.ff_vert)
+
+			reg_ec   = self.i_regs[32][4:0]
+			reg_rsel = self.i_regs[17][3]
+			reg_csel = self.i_regs[22][3]
+			reg_den  = self.i_regs[17][4]
 
 			edge_ll = specs.xfvc + 7 if (reg_csel == 0) else specs.xfvc
 			edge_rr = specs.xlvc - 8 if (reg_csel == 0) else specs.xlvc + 1
 			edge_hi = specs.yfvc + 4 if (reg_rsel == 0) else specs.yfvc
 			edge_lo = specs.ylvc - 3 if (reg_rsel == 0) else specs.ylvc + 1
 
-			ff_main = self.ff_main.now
-			ff_vert = self.ff_vert.now
 
-			if self.i_strb.now[0]:
+			if self.i_strb[0]:
 
-				self.o_colr.nxt <<= self.o_colr.now
-				self.o_bord.nxt <<= self.o_bord.now
+				self.o_colr <<= self.o_colr
+				self.o_bord <<= self.o_bord
 
 				# vertical ff control
-				if (self.i_cycl.now == specs.CYCLE_YFF):
-					if (self.i_ypos.now == edge_lo):
+				if (self.i_cycl == specs.CYCLE_YFF):
+					if (self.i_ypos == edge_lo):
 						ff_vert <<= 1
 
-					elif (self.i_ypos.now == edge_hi) and (reg_den == 1):
+					elif (self.i_ypos == edge_hi) and (reg_den == 1):
 						ff_vert <<= 0
 
-				elif (self.i_xpos.now == edge_ll):
-					if (self.i_ypos.now == edge_lo):
+				elif (self.i_xpos == edge_ll):
+					if (self.i_ypos == edge_lo):
 						ff_vert <<= 1
 
-					elif (self.i_ypos.now == edge_hi) and (reg_den == 1):
+					elif (self.i_ypos == edge_hi) and (reg_den == 1):
 						ff_vert <<= 0
 
 				# main ff control
-				if (self.i_xpos.now == edge_rr):
+				if (self.i_xpos == edge_rr):
 					ff_main <<= 1
-				elif (self.i_xpos.now == edge_ll) and (ff_vert == 0):
+				elif (self.i_xpos == edge_ll) and (ff_vert == 0):
 					ff_main <<= 0
 
 				if (ff_main == 0) and (ff_vert == 0):
-					self.o_bord.nxt <<= 0
+					self.o_bord <<= 0
 				else:
-					self.o_bord.nxt <<= 1
-					self.o_colr.nxt <<= reg_ec
+					self.o_bord <<= 1
+					self.o_colr <<= reg_ec
 
 					if reg_ec != 0:
 						pass
 
-				self.ff_vert.nxt <<= ff_vert
-				self.ff_main.nxt <<= ff_main
+				self.ff_vert <<= ff_vert
+				self.ff_main <<= ff_main
+
+				if self.o_bord:
+					bl.add("[BORDER] On")
+				else:
+					bl.add("[BORDER] Off")
 
 			if self.i_rst.now:
-				self.ff_main.nxt <<= 1
-				self.ff_vert.nxt <<= 1
-				self.o_bord.nxt  <<= 1
+				self.ff_main <<= 1
+				self.ff_vert <<= 1
+				self.o_bord  <<= 1
