@@ -51,18 +51,18 @@ class VicTest(Entity):
 		self.clk = Signal(Wire())
 		self.rst = Signal(Wire())
 
-		self.clk |= self.clkgen.clk
+		self.clk             |= self.clkgen.clk
 
-		self.dut.i_clk |= self.clk
-		self.dut.i_rst |= self.rst
+		self.dut.i_clk       |= self.clk
+		self.dut.i_rst       |= self.rst
 
-		self.render.i_clk  |= self.clk
-		self.render.i_rst  |= self.rst
-		self.render.i_colr |= self.dut.o_colr
-		self.render.i_push |= self.dut.o_push
-		self.render.i_fstr |= self.dut.o_fstr
-		self.render.i_lend |= self.dut.o_lend
-		self.render.i_lstr |= self.dut.o_lstr
+		self.render.i_clk    |= self.clk
+		self.render.i_rst    |= self.rst
+		self.render.i_colr   |= self.dut.o_colr
+		self.render.i_push   |= self.dut.o_push
+		self.render.i_fstr   |= self.dut.o_fstr
+		self.render.i_lend   |= self.dut.o_lend
+		self.render.i_lstr   |= self.dut.o_lstr
 
 		self.renderxl.i_clk  |= self.clk
 		self.renderxl.i_rst  |= self.rst

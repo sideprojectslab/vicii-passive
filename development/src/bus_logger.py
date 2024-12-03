@@ -150,36 +150,36 @@ def reg_write_analyze(reg, val, regs=t_vic_regs):
 	if reg in range(0, 16, 2):
 		idx = reg // 2
 		x_hi = (regs[16].val >> idx) & 1
-		ret.append(f"\tSprite {idx} X (low) position => {val + (x_hi << 8)}")
+		ret.append(f"    Sprite {idx} X (low) position => {val + (x_hi << 8)}")
 
 	if reg in range(1, 16, 2):
 		idx = reg // 2
-		ret.append(f"\tSprite {idx} Y position => {val}")
+		ret.append(f"    Sprite {idx} Y position => {val}")
 
 	if reg == 17:
-		ret.append(f"\tYscroll    => {val & 0b111}")
-		ret.append(f"\tRSEL       => {(val >> 3) & 1}")
-		ret.append(f"\tDEN        => {(val >> 4) & 1}")
+		ret.append(f"    Yscroll    => {val & 0b111}")
+		ret.append(f"    RSEL       => {(val >> 3) & 1}")
+		ret.append(f"    DEN        => {(val >> 4) & 1}")
 		ecm = (val >> 6) & 1
 		bmm = (val >> 5) & 1
 		mcm = (regs[22].val >> 4) & 1
 		mode = get_video_mode(ecm, bmm, mcm)
-		ret.append(f"\tVideo Mode => {mode}")
+		ret.append(f"    Video Mode => {mode}")
 
 	if reg == 22:
-		ret.append(f"\tXscroll    => {val & 0b111}")
-		ret.append(f"\tCSEL       => {(val >> 3) & 1}")
+		ret.append(f"    Xscroll    => {val & 0b111}")
+		ret.append(f"    CSEL       => {(val >> 3) & 1}")
 		ecm = (regs[17].val >> 6) & 1
 		bmm = (regs[17].val >> 5) & 1
 		mcm = (val >> 4) & 1
 		mode = get_video_mode(ecm, bmm, mcm)
-		ret.append(f"\tVideo Mode => {mode}")
+		ret.append(f"    Video Mode => {mode}")
 
 	if reg == 32:
-		ret.append(f"\tBorder Color => {COLOR[val & 0xff]}")
+		ret.append(f"    Border Color => {COLOR[val & 0xff]}")
 
 	if reg in range(33, 37):
 		idx = reg - 33
-		ret.append(f"\tBackground Color [{idx}] => {COLOR[val & 0xff]}")
+		ret.append(f"    Background Color [{idx}] => {COLOR[val & 0xff]}")
 
 	return ret

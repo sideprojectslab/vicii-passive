@@ -27,7 +27,9 @@ from ezhdl     import *
 from vic_pkg   import *
 from registers import *
 
-MODE      = Enum("STD_TEXT", "MCL_TEXT", "STD_BMAP", "MCL_BMAP", "ECM_TEXT", "INVALID")
+import bus_logger as bl
+
+MODE      = EnumDef("STD_TEXT", "MCL_TEXT", "STD_BMAP", "MCL_BMAP", "ECM_TEXT", "INVALID")
 SHREG_LEN = 16
 
 class GraphicsGen(Entity):
@@ -45,7 +47,7 @@ class GraphicsGen(Entity):
 
 		class InternalSignals(Record):
 			def __init__(self):
-				self.mode     = Unsigned().span(len(MODE))
+				self.mode     = Enum(MODE)
 				self.grfx     = type(t_vic_grfx)()
 				self.en       = Wire()
 				self.data     = type(t_vic_data)()
@@ -99,6 +101,8 @@ class GraphicsGen(Entity):
 				if (v.en == 1) and (v.xscroll == 0) and not v.loaded:
 					v.loaded <<= 1
 
+					bl.add("[GFX-GEN] Loading Shift Register")
+
 					# loading the shift registers
 					for i in range(4):
 						j = i*2
@@ -147,6 +151,12 @@ class GraphicsGen(Entity):
 							v.gfx_colr[0] <<= self.i_regs[36][4:0]
 
 					v.gfx_colr[1] <<= v.data[12:8]
+
+				bl.add("[GFX-GEN] Graphics Colors:")
+				bl.add(f"    {bl.COLOR[v.gfx_colr[0]]}")
+				bl.add(f"    {bl.COLOR[v.gfx_colr[1]]}")
+				bl.add(f"    {bl.COLOR[v.gfx_colr[2]]}")
+				bl.add(f"    {bl.COLOR[v.gfx_colr[3]]}")
 
 				if (v.mode == MODE.STD_TEXT):
 					if v.shreg_sc[SHREG_LEN - 1] == 0:

@@ -53,7 +53,7 @@ class Registers(Entity):
 			if (self.i_strb == 15) and (self.wen == 1):
 				self.wen <<= 0
 				self.o_regs[self.a_tmp] <<= self.d_tmp
-				bl.add(bl.reg_write_analyze(self.a_tmp.val, self.d_tmp.val, self.o_regs))
+				bl.add(bl.reg_write_analyze(self.a_tmp.now.val, self.d_tmp.now.val, self.o_regs.now))
 
 			if self.i_rst:
 				self.wen <<= 0
