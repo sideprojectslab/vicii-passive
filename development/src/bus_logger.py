@@ -108,22 +108,22 @@ REG_NAMES = [
 ]
 
 COLOR = [
-	"Black",
-	"White",
-	"Red",
-	"Cyan",
-	"Purple",
-	"Green",
-	"Blue",
-	"Yellow",
-	"Orange",
-	"Brown",
-	"Pink",
-	"Dark Grey",
-	"Grey",
-	"Light Green",
-	"Light Blue",
-	"Light Grey"
+	"Black"      , # 0000
+	"White"      , # 0001
+	"Red"        , # 0010
+	"Cyan"       , # 0011
+	"Purple"     , # 0100
+	"Green"      , # 0101
+	"Blue"       , # 0110
+	"Yellow"     , # 0111
+	"Orange"     , # 1000
+	"Brown"      , # 1001
+	"Pink"       , # 1010
+	"Dark Grey"  , # 1011
+	"Grey"       , # 1100
+	"Light Green", # 1101
+	"Light Blue" , # 1110
+	"Light Grey"   # 1111
 ]
 
 def get_video_mode(ecm, bmm, mcm):

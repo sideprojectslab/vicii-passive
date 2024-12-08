@@ -29,11 +29,7 @@ import bus_logger as bl
 
 UNLOCK_CYCLES = 3
 
-ST_UNLOCKED = 0
-ST_LLOCKING = 1
-ST_LLOCKED  = 2
-ST_LOCKED   = 3
-ST_NUM      = 4
+STATE = EnumDef("UNLOCKED", "LLOCKING", "LLOCKED", "LOCKED")
 
 class Sync(Entity):
 
@@ -48,7 +44,7 @@ class Sync(Entity):
 		self.o_xpos  = Output(t_vic_ppos)
 		self.o_ypos  = Output(t_vic_ppos)
 
-		self.state        = Signal(Unsigned(ST_UNLOCKED).span(ST_NUM))
+		self.state        = Signal(Enum(STATE))
 		self.shreg_old    = Signal(Unsigned().bits(10))
 		self.refpat       = Signal(self.shreg_old)
 		self.count_unlock = Signal(Unsigned().upto(UNLOCK_CYCLES))
@@ -64,139 +60,140 @@ class Sync(Entity):
 
 
 	def _run(self):
+
+		self.o_lock.nxt <<= int(self.state.now == STATE.LOCKED)
+
 		if self.i_clk.posedge():
 			shreg = Unsigned().bits(10)
-			specs = self.i_specs
+			specs = self.i_specs.now
 
-			shreg <<= join(self.shreg_old[8:], self.i_a[2:])
+			shreg <<= join(self.shreg_old.now[8:], self.i_a.now[2:])
 
-			if self.i_strb == 2:
+			if self.i_strb.now == 2:
 
-				self.shreg_old <<= shreg
+				self.shreg_old.nxt <<= shreg
 
-				if (self.cycl_i < specs.cycl - 1):
-					self.cycl_i <<= self.cycl_i + 1
+				if (self.cycl_i.now < specs.cycl - 1):
+					self.cycl_i.nxt <<= self.cycl_i.now + 1
 				else:
-					self.cycl_i <<= 0
+					self.cycl_i.nxt <<= 0
 
-					if (self.ypos_i < specs.ylen - 1):
-						self.ypos_i <<= self.ypos_i + 1
+					if (self.ypos_i.now < specs.ylen - 1):
+						self.ypos_i.nxt <<= self.ypos_i.now + 1
 					else:
-						self.ypos_i <<= 0
+						self.ypos_i.nxt <<= 0
 
 
-				if self.cycl_i == specs.CYCL_REF:
+				if self.cycl_i.now == specs.CYCL_REF:
 
-					if self.state == ST_UNLOCKED:
+					if self.state.now == STATE.UNLOCKED:
 						if self.is_refresh(shreg):
-							self.state  <<= ST_LLOCKING
-							self.refpat <<= join(shreg[8:], shreg[8:6])
+							self.state.nxt  <<= STATE.LLOCKING
+							self.refpat.nxt <<= join(shreg[8:], shreg[8:6])
 						else:
 							# skip a cycle and try again
-							self.cycl_i <<= specs.CYCL_REF + 2
+							self.cycl_i.nxt <<= specs.CYCL_REF + 2
 
-					elif self.state == ST_LLOCKING:
-						if (shreg == self.refpat):
+					elif self.state.now == STATE.LLOCKING:
+						if (shreg == self.refpat.now):
 							# if is_refresh(shreg) then
-							self.state        <<= ST_LLOCKED
-							self.count_unlock <<= UNLOCK_CYCLES
-							self.refpat       <<= join(shreg[8:], shreg[8:6])
+							self.state.nxt        <<= STATE.LLOCKED
+							self.count_unlock.nxt <<= UNLOCK_CYCLES
+							self.refpat.nxt       <<= join(shreg[8:], shreg[8:6])
 						else:
 							# skip a cycle and start over
-							self.state  <<= ST_UNLOCKED
-							self.cycl_i <<= specs.CYCL_REF + 2
+							self.state.nxt  <<= STATE.UNLOCKED
+							self.cycl_i.nxt <<= specs.CYCL_REF + 2
 
-					elif self.state == ST_LLOCKED:
+					elif self.state.now == STATE.LLOCKED:
 						if (shreg == 0b1111111111):
-							self.state        <<= ST_LOCKED
-							self.ypos_i       <<= specs.ylen - 1
-							self.refpat       <<= 0b1110010011
-							self.count_unlock <<= UNLOCK_CYCLES
+							self.state.nxt        <<= STATE.LOCKED
+							self.ypos_i.nxt       <<= specs.ylen - 1
+							self.refpat.nxt       <<= 0b1110010011
+							self.count_unlock.nxt <<= UNLOCK_CYCLES
 
-						elif (shreg == self.refpat):
-							self.refpat       <<= join(self.refpat[8:], self.refpat[8:6])
-							self.count_unlock <<= UNLOCK_CYCLES
+						elif (shreg == self.refpat.now):
+							self.refpat.nxt       <<= join(self.refpat.now[8:], self.refpat.now[8:6])
+							self.count_unlock.nxt <<= UNLOCK_CYCLES
 
-						elif (self.count_unlock != 0):
-							self.refpat       <<= join(self.refpat[6:], self.refpat[8:6])
-							self.count_unlock <<= self.count_unlock - 1
+						elif (self.count_unlock.now != 0):
+							self.refpat.nxt       <<= join(self.refpat.now[6:], self.refpat.now[8:6])
+							self.count_unlock.nxt <<= self.count_unlock.now - 1
 
 						else:
 							# skip a cycle and start over
-							self.state  <<= ST_UNLOCKED
-							self.cycl_i <<= specs.CYCL_REF + 2
+							self.state.nxt  <<= STATE.UNLOCKED
+							self.cycl_i.nxt <<= specs.CYCL_REF + 2
 
-					elif self.state == ST_LOCKED:
-						if (self.ypos_i == specs.ylen - 1):
+					elif self.state.now == STATE.LOCKED:
+						if (self.ypos_i.now == specs.ylen - 1):
 							if (shreg == 0b1111111111):
-								self.refpat       <<= 0b1110010011
-								self.count_unlock <<= UNLOCK_CYCLES
+								self.refpat.nxt       <<= 0b1110010011
+								self.count_unlock.nxt <<= UNLOCK_CYCLES
 
-							elif self.count_unlock != 0:
-								self.refpat       <<= 0b1110010011
-								self.count_unlock <<= self.count_unlock - 1
+							elif self.count_unlock.now != 0:
+								self.refpat.nxt       <<= 0b1110010011
+								self.count_unlock.nxt <<= self.count_unlock.now - 1
 
 							else:
 								# skip a cycle and start over
-								self.state  <<= ST_UNLOCKED
-								self.cycl_i <<= specs.CYCL_REF + 2
+								self.state.nxt  <<= STATE.UNLOCKED
+								self.cycl_i.nxt <<= specs.CYCL_REF + 2
 
 						else:
-							if (shreg == self.refpat):
-								self.refpat       <<= join(self.refpat[8:], self.refpat[8:6])
-								self.count_unlock <<= UNLOCK_CYCLES
+							if (shreg == self.refpat.now):
+								self.refpat.nxt       <<= join(self.refpat.now[8:], self.refpat.now[8:6])
+								self.count_unlock.nxt <<= UNLOCK_CYCLES
 
-							elif self.count_unlock != 0:
-								self.count_unlock <<= self.count_unlock - 1
-								self.refpat       <<= join(self.refpat[8:], self.refpat[8:6])
+							elif self.count_unlock.now != 0:
+								self.count_unlock.nxt <<= self.count_unlock.now - 1
+								self.refpat.nxt       <<= join(self.refpat.now[8:], self.refpat.now[8:6])
 
 							else:
 								# skip a cycle and start over
-								self.state  <<= ST_UNLOCKED
-								self.cycl_i <<= specs.CYCL_REF + 2
+								self.state.nxt  <<= STATE.UNLOCKED
+								self.cycl_i.nxt <<= specs.CYCL_REF + 2
 
 			# advancing the pixel counter on odd strobe cycles
-			if (self.i_strb[0]):
-				if (self.o_xpos < specs.xlen - 1):
-					self.o_xpos <<= self.o_xpos + 1
+			if (self.i_strb.now[0]):
+				if (self.o_xpos.now < specs.xlen - 1):
+					self.o_xpos.nxt <<= self.o_xpos.now + 1
 				else:
-					self.o_xpos <<= 0
+					self.o_xpos.nxt <<= 0
+
+				if self.state.now == STATE.LOCKED:
+					bl.add(f"[SYNC] X-RASTER = {self.o_xpos.now.dump}")
+					bl.add(f"[SYNC] Y-RASTER = {self.o_ypos.now.dump}")
+					bl.add(f"[SYNC] CYCLE    = {self.o_cycl.now.dump}")
 
 			# position outputs are latched on the last strobe of a character
 			# cycle, so that they are constant and correct during the whole
 			# cycle
-			if (self.i_strb == 15):
+			if (self.i_strb.now == 15):
 				# cycl_i already contains the next cycle index
-				self.o_cycl <<= self.cycl_i
+				self.o_cycl.nxt <<= self.cycl_i.now
 
 				# y coordinate cycles automatically
-				if (self.cycl_i == 0):
-					if (self.o_ypos < specs.ylen - 1):
-						self.o_ypos <<= self.o_ypos + 1
+				if (self.cycl_i.now == 0):
+					if (self.o_ypos.now < specs.ylen - 1):
+						self.o_ypos.nxt <<= self.o_ypos.now + 1
 					else:
-						self.o_ypos <<= 0
+						self.o_ypos.nxt <<= 0
 
 				# on the reference cycle we re-synchronize all counters with
 				# appropriate offsets
-				if (self.cycl_i == specs.CYCL_REF + 1):
-					self.o_xpos <<= specs.xref
+				if (self.cycl_i.now == specs.CYCL_REF + 1):
+					self.o_xpos.nxt <<= specs.xref
 
-					if (self.ypos_i == 0):
-						self.o_ypos <<= specs.yref
+					if (self.ypos_i.now == 0):
+						self.o_ypos.nxt <<= specs.yref
 
-			self.o_lock <<= int(self.state == ST_LOCKED)
-
-			if self.state == ST_LOCKED:
-				bl.add(f"[SYNC] X-RASTER = {self.o_xpos.now.val}")
-				bl.add(f"[SYNC] Y-RASTER = {self.o_ypos.now.val}")
-				bl.add(f"[SYNC] CYCLE    = {self.o_cycl.now.val}")
-
-			if self.i_rst:
-				self.state        <<= ST_LOCKED
-				self.count_unlock <<= UNLOCK_CYCLES
-				self.shreg_old    <<= 0b111001
-				self.refpat       <<= 0b1110010011
-				self.cycl_i       <<= specs.CYCL_REF - 1
-				self.o_cycl       <<= specs.CYCL_REF - 1
-				self.ypos_i       <<= 0
-				self.o_ypos       <<= 0
+			if self.i_rst.now:
+				self.state       .nxt <<= STATE.LOCKED
+				self.count_unlock.nxt <<= UNLOCK_CYCLES
+				self.shreg_old   .nxt <<= 0b111001
+				self.refpat      .nxt <<= 0b1110010011
+				self.cycl_i      .nxt <<= specs.CYCL_REF - 1
+				self.o_cycl      .nxt <<= specs.CYCL_REF - 1
+				self.ypos_i      .nxt <<= 0
+				self.o_ypos      .nxt <<= 0

@@ -26,6 +26,7 @@
 from ezhdl   import *
 from vic_pkg import *
 
+import bus_logger as bl
 class Strobe(Entity):
 	def __init__(self):
 		self.i_clk  = Input (Wire())
@@ -37,16 +38,18 @@ class Strobe(Entity):
 
 	def _run(self):
 		if self.i_clk.posedge():
-			if self.ph0_1r == 1 and self.i_ph0 == 0:
-				self.o_strb <<= 1
+			if self.ph0_1r.now == 1 and self.i_ph0.now == 0:
+				self.o_strb.nxt <<= 1
 				pass
 			else:
-				self.o_strb <<= self.o_strb + 1
-			self.ph0_1r <<= self.i_ph0
+				self.o_strb.nxt <<= self.o_strb.now + 1
+			self.ph0_1r.nxt <<= self.i_ph0.now
 
-			if self.i_rst:
-				self.ph0_1r <<= 1
-				self.o_strb <<= 0
+			bl.add(f"[STROBE] strobe = {self.o_strb.now.dump}")
+
+			if self.i_rst.now:
+				self.ph0_1r.nxt <<= 1
+				self.o_strb.nxt <<= 0
 
 	def _reset(self):
 		pass

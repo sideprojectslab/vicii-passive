@@ -30,7 +30,9 @@ from registers import *
 import bus_logger as bl
 
 MODE      = EnumDef("STD_TEXT", "MCL_TEXT", "STD_BMAP", "MCL_BMAP", "ECM_TEXT", "INVALID")
-SHREG_LEN = 16
+
+# we have an additional cell in the shift register to implement an additional cycle delay
+SHREG_LEN = 9
 
 class GraphicsGen(Entity):
 	def __init__(self):
@@ -45,154 +47,202 @@ class GraphicsGen(Entity):
 		self.o_bgnd  = Output(Wire())
 		self.o_colr  = Output(t_vic_colr)
 
-		class InternalSignals(Record):
-			def __init__(self):
-				self.mode     = Enum(MODE)
-				self.grfx     = type(t_vic_grfx)()
-				self.en       = Wire()
-				self.data     = type(t_vic_data)()
-				self.mc_flag  = Wire()
-				self.bg_sel   = Wire()
-				self.shreg_bg = Unsigned().bits(SHREG_LEN)
-				self.shreg_sc = Unsigned().bits(SHREG_LEN)
-				self.shreg_mc = Array([Unsigned().bits(2)]*SHREG_LEN)
-				self.gfx_colr = Array([t_vic_colr]*4)
-				self.xscroll  = Unsigned().upto(7)
-				self.loaded   = Wire()
+		self.shreg_sc = Signal(Unsigned().bits(SHREG_LEN))
+		self.shreg_mc = Signal(Array([Unsigned().bits(2)]*SHREG_LEN))
+		self.xscroll  = Signal(Unsigned().upto(7))
 
-		self.s = Signal(InternalSignals())
+		self.en_1r    = Signal(Wire())
+		self.grfx_1r  = Signal(t_vic_grfx)
+		self.grfx_2r  = Signal(t_vic_grfx)
+		self.data_1r  = Signal(t_vic_data)
+		self.data_2r  = Signal(t_vic_data)
+		self.data_3r  = Signal(t_vic_data)
+		self.data_4r  = Signal(t_vic_data)
+
+		self.bg_colr  = Signal(Array([t_vic_colr]*4), ppl=1)
+
+		self.ecm      = Signal(Wire())
+		self.mcm      = Signal(Wire())
+		self.bmm      = Signal(Wire())
 
 
 	def _run(self):
+
+		mode     = Enum(MODE)
+		mc_flag  = Wire()
+		gfx_colr = Array([t_vic_colr]*4)
+		bg_sel   = Wire()
+
 		if self.i_clk.posedge():
-			v = local(self.s)
 
-			ecm = self.i_regs[17][6]
-			bmm = self.i_regs[17][5]
-			mcm = self.i_regs[22][4]
+			if (self.i_strb.now & 1):
 
-			if(ecm == 0) and (bmm == 0) and (mcm == 0):
-				mode = MODE.STD_TEXT
-			elif (ecm == 0) and (bmm == 0) and (mcm == 1):
-				mode = MODE.MCL_TEXT
-			elif (ecm == 0) and (bmm == 1) and (mcm == 0):
-				mode = MODE.STD_BMAP
-			elif (ecm == 0) and (bmm == 1) and (mcm == 1):
-				mode = MODE.MCL_BMAP
-			elif (ecm == 1) and (bmm == 0) and (mcm == 0):
-				mode = MODE.ECM_TEXT
-			else:
-				mode = MODE.INVALID
+				# this should probably be subject to some condition, like the video matrix
+				# actually outputting data
+				self.grfx_1r.nxt <<= self.i_grfx.now
+				self.data_1r.nxt <<= self.i_data.now
 
-			# serializer
-			if (self.i_strb & 1):
-				v.shreg_mc[1:] <<= v.shreg_mc[0:-1]
-				v.shreg_sc     <<= v.shreg_sc << 1
+				################################################################
+				#                    LATCHING NEW CHARACTER                    #
+				################################################################
 
-				# operate with a 1-pixel delay like the border unit, so that the outputs
-				# of the two modules are aligned
-				if (self.i_strb == 1):
-					v.loaded  <<= 0
-					v.xscroll <<= self.i_regs[22][3:0]
-					v.data    <<= self.i_data
-					v.grfx    <<= self.i_grfx
-					v.en      <<= self.i_en
+				if (self.i_strb.now == 15):
+					self.xscroll.nxt <<= self.i_regs.now[22][3:0]
+					if self.i_en.now:
+						self.grfx_2r.nxt <<= self.grfx_1r.now
+						self.data_2r.nxt <<= self.data_1r.now
+						self.en_1r  .nxt <<= 1
+					else:
+						self.data_1r.nxt <<= 0
+						self.en_1r  .nxt <<= 0
 
-				if (v.en == 1) and (v.xscroll == 0) and not v.loaded:
-					v.loaded <<= 1
+				################################################################
+				#                    LOADING SHIFT REGISTER                    #
+				################################################################
 
-					bl.add("[GFX-GEN] Loading Shift Register")
+				self.shreg_mc.nxt[1:] <<= self.shreg_mc.now[:-1]
+				self.shreg_sc.nxt     <<= self.shreg_sc.now << 1
 
-					# loading the shift registers
-					for i in range(4):
-						j = i*2
-						v.shreg_mc[j  ] <<= v.grfx[j+2:j]
-						v.shreg_mc[j+1] <<= v.grfx[j+2:j]
+				if (self.i_strb.now // 2) == self.xscroll.now:
+					if self.en_1r.now:
 
-					v.shreg_sc[8:0] <<= v.grfx
+						bl.add("[GFX-GEN] Loading Shift Register")
 
-				if v.xscroll != 0:
-					v.xscroll <<= v.xscroll - 1
+						self.data_3r.nxt <<= self.data_2r.now
+						# loading the shift registers
+						for i in range(4):
+							j = i*2
+							self.shreg_mc.nxt[j  ] <<= self.grfx_2r.now[j+2:j]
+							self.shreg_mc.nxt[j+1] <<= self.grfx_2r.now[j+2:j]
 
-				v.mode     <<= mode
-				v.mc_flag  <<= v.data[11]
-				v.bg_sel   <<= v.data[8:6]
+						self.shreg_sc.nxt[8:0] <<= self.grfx_2r.now
 
-				v.gfx_colr <<= Array([t_vic_colr]*4)
-				if (v.mode == MODE.STD_TEXT):
-					v.gfx_colr[0] <<= self.i_regs[33][4:0]
-					v.gfx_colr[1] <<= v.data[12:8]
+				self.data_4r.nxt <<= self.data_3r.now
 
-				elif (v.mode == MODE.MCL_TEXT):
-					v.gfx_colr[0] <<= self.i_regs[33][4:0]
-					v.gfx_colr[1] <<= self.i_regs[34][4:0]
-					v.gfx_colr[2] <<= self.i_regs[35][4:0]
-					v.gfx_colr[3] <<= v.data[11:8]
+				if self.i_strb.now == 11:
+					self.ecm.nxt <<= self.i_regs.now[17][6]
+					self.bmm.nxt <<= self.i_regs.now[17][5]
+					self.mcm.nxt <<= self.i_regs.now[22][4]
+				elif self.i_strb.now == 13:
+					self.mcm.nxt <<= self.i_regs.now[22][4]
+				elif self.i_strb.now == 15:
+					self.ecm.nxt <<= self.i_regs.now[17][6]
+					self.bmm.nxt <<= self.i_regs.now[17][5]
 
-				elif (v.mode ==  MODE.STD_BMAP):
-					v.gfx_colr[0] <<= v.data[4:0]
-					v.gfx_colr[1] <<= v.data[8:4]
 
-				elif (v.mode == MODE.MCL_BMAP):
-					v.gfx_colr[0] <<= self.i_regs[33][4:0]
-					v.gfx_colr[1] <<= v.data[8:4]
-					v.gfx_colr[2] <<= v.data[4:0]
-					v.gfx_colr[3] <<= v.data[12:8]
+				if(self.ecm.now == 0) and (self.bmm.now == 0) and (self.mcm.now == 0):
+					mode <<= MODE.STD_TEXT # single-color
+				elif (self.ecm.now == 0) and (self.bmm.now == 0) and (self.mcm.now == 1):
+					mode <<= MODE.MCL_TEXT # multi-color decided by the color memory
+				elif (self.ecm.now == 0) and (self.bmm.now == 1) and (self.mcm.now == 0):
+					mode <<= MODE.STD_BMAP # single-color
+				elif (self.ecm.now == 0) and (self.bmm.now == 1) and (self.mcm.now == 1):
+					mode <<= MODE.MCL_BMAP # multi-color
+				elif (self.ecm.now == 1) and (self.bmm.now == 0) and (self.mcm.now == 0):
+					mode <<= MODE.ECM_TEXT
+				else:
+					mode <<= MODE.INVALID
+
+				################################################################
+				#                       COLOR SELECTION                        #
+				################################################################
+
+				self.bg_colr.nxt[0] <<= self.i_regs.now[33][4:0]
+				self.bg_colr.nxt[1] <<= self.i_regs.now[34][4:0]
+				self.bg_colr.nxt[2] <<= self.i_regs.now[35][4:0]
+				self.bg_colr.nxt[3] <<= self.i_regs.now[36][4:0]
+				bg_sel              <<= self.data_4r.now[8:6]
+
+				if self.i_regs.now[33][4:0] != self.bg_colr.now[0]:
+					pass
+
+				if (mode == MODE.STD_TEXT):
+					gfx_colr[0] <<= self.bg_colr.now[0]
+					gfx_colr[1] <<= self.data_4r.now[12:8]
+
+				elif (mode == MODE.MCL_TEXT):
+					gfx_colr[0] <<= self.bg_colr.now[0]
+					gfx_colr[1] <<= self.bg_colr.now[1]
+					gfx_colr[2] <<= self.bg_colr.now[2]
+					gfx_colr[3] <<= self.data_4r.now[11:8]
+
+				elif (mode ==  MODE.STD_BMAP):
+					gfx_colr[0] <<= self.data_4r.now[4:0]
+					gfx_colr[1] <<= self.data_4r.now[8:4]
+
+				elif (mode == MODE.MCL_BMAP):
+					gfx_colr[0] <<= self.bg_colr.now[0]
+					gfx_colr[1] <<= self.data_4r.now[8:4]
+					gfx_colr[2] <<= self.data_4r.now[4:0]
+					gfx_colr[3] <<= self.data_4r.now[12:8]
 
 				elif (mode == MODE.ECM_TEXT):
-					match v.bg_sel:
+					match bg_sel:
 						case 0b00:
-							v.gfx_colr[0] <<= self.i_regs[33][4:0]
+							gfx_colr[0] <<= self.bg_colr.now[0]
 						case 0b01:
-							v.gfx_colr[0] <<= self.i_regs[34][4:0]
+							gfx_colr[0] <<= self.bg_colr.now[1]
 						case 0b10:
-							v.gfx_colr[0] <<= self.i_regs[35][4:0]
+							gfx_colr[0] <<= self.bg_colr.now[2]
 						case 0b11:
-							v.gfx_colr[0] <<= self.i_regs[36][4:0]
-
-					v.gfx_colr[1] <<= v.data[12:8]
-
-				bl.add("[GFX-GEN] Graphics Colors:")
-				bl.add(f"    {bl.COLOR[v.gfx_colr[0]]}")
-				bl.add(f"    {bl.COLOR[v.gfx_colr[1]]}")
-				bl.add(f"    {bl.COLOR[v.gfx_colr[2]]}")
-				bl.add(f"    {bl.COLOR[v.gfx_colr[3]]}")
-
-				if (v.mode == MODE.STD_TEXT):
-					if v.shreg_sc[SHREG_LEN - 1] == 0:
-						self.o_colr <<= v.gfx_colr[0]
-						self.o_bgnd <<= 1
-					else:
-						self.o_colr <<= v.gfx_colr[1]
-						self.o_bgnd <<= 0
-
-				elif (v.mode == MODE.MCL_TEXT):
-					if (v.mc_flag):
-						self.o_colr <<= v.gfx_colr[v.shreg_mc[-1]]
-						self.o_bgnd <<= not v.shreg_mc[-1][1]
-					elif v.shreg_sc[-1] == 0:
-						self.o_colr <<= v.gfx_colr[0]
-						self.o_bgnd <<= 1
-					else:
-						self.o_colr <<= v.gfx_colr[3]
-						self.o_bgnd <<= 0
-
-				elif (v.mode == MODE.STD_BMAP) or (v.mode == MODE.ECM_TEXT):
-					if v.shreg_sc[-1] == 0:
-						self.o_colr <<= v.gfx_colr[0]
-					else:
-						self.o_colr <<= v.gfx_colr[1]
-					self.o_bgnd <<= not v.shreg_sc[-1]
-
-				elif (v.mode == MODE.MCL_BMAP):
-					self.o_colr <<= v.gfx_colr[v.shreg_mc[-1]]
-					self.o_bgnd <<= not v.shreg_mc[-1][1]
+							gfx_colr[0] <<= self.bg_colr.now[3]
+					gfx_colr[1] <<= self.data_4r.now[12:8]
 
 				else:
-					self.o_colr <<= self.o_colr
-					self.o_bgnd <<= 1
+					pass
 
-			self.s <<= v
+				################################################################
+				#                            OUTPUT                            #
+				################################################################
 
-			if self.i_rst:
-				self.s.loaded <<= 0
+				mc_flag <<= self.data_3r.now[11]
+
+				if (mode == MODE.STD_TEXT):
+					if self.shreg_sc.now[-1] == 0:
+						self.o_colr.nxt <<= gfx_colr[0]
+						self.o_bgnd.nxt <<= 1
+					else:
+						self.o_colr.nxt <<= gfx_colr[1]
+						self.o_bgnd.nxt <<= 0
+
+				elif (mode == MODE.MCL_TEXT):
+					if (mc_flag):
+						self.o_colr.nxt <<= gfx_colr[self.shreg_mc.now[-1]]
+						self.o_bgnd.nxt <<= not self.shreg_mc.now[-1][1]
+					elif self.shreg_sc.now[-1] == 0:
+						self.o_colr.nxt <<= gfx_colr[0]
+						self.o_bgnd.nxt <<= 1
+					else:
+						self.o_colr.nxt <<= gfx_colr[3]
+						self.o_bgnd.nxt <<= 0
+
+				elif (mode == MODE.STD_BMAP) or (mode == MODE.ECM_TEXT):
+					if self.shreg_sc.now[-1] == 0:
+						self.o_colr.nxt <<= gfx_colr[0]
+					else:
+						self.o_colr.nxt <<= gfx_colr[1]
+					self.o_bgnd.nxt <<= not self.shreg_sc.now[-1]
+
+				elif (mode == MODE.MCL_BMAP):
+					self.o_colr.nxt <<= gfx_colr[self.shreg_mc.now[-1]]
+					self.o_bgnd.nxt <<= not self.shreg_mc.now[-1][1]
+
+				else:
+					self.o_bgnd.nxt <<= not self.shreg_sc.now[-1]
+
+				################################################################
+				#                           LOGGING                            #
+				################################################################
+
+				bl.add("[GFX-GEN] Graphics Colors:")
+				bl.add(f"    {bl.COLOR[gfx_colr[0]]}")
+				bl.add(f"    {bl.COLOR[gfx_colr[1]]}")
+				bl.add(f"    {bl.COLOR[gfx_colr[2]]}")
+				bl.add(f"    {bl.COLOR[gfx_colr[3]]}")
+				bl.add("[GFX-GEN] Video Mode:")
+				bl.add(f"    {mode.dump}")
+				bl.add("[GFX-GEN] Xscroll:")
+				bl.add(f"    {self.xscroll.now.dump}")
+
+		if self.i_rst.now:
+			pass

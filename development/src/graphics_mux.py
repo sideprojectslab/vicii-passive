@@ -62,51 +62,51 @@ class GraphicsMux(Entity):
 	def _run(self):
 
 		# concurrent statements
-		self.o_push <<= self.xval & self.yval & (self.i_strb[0])
+		self.o_push.nxt <<= self.xval.now & self.yval.now & (self.i_strb.now[0])
 
 		if self.i_clk.posedge():
-			specs = local(self.i_specs)
+			specs = self.i_specs.now
 
-			if not (self.i_strb[0]):
+			if not (self.i_strb.now[0]):
 
-				self.o_lstr <<= 0
-				self.o_lend <<= 0
+				self.o_lstr.nxt <<= 0
+				self.o_lend.nxt <<= 0
 
-				if self.i_bord_actv:
-					self.o_colr <<= self.i_bord_colr
+				if self.i_bord_actv.now:
+					self.o_colr.nxt <<= self.i_bord_colr.now
 				else:
-					if ((self.i_sprt_actv == 0                              ) or
-					    ((self.i_sprt_prio == 0) and (self.i_grfx_bgnd == 0))):
-						self.o_colr <<= self.i_grfx_colr
+					if ((self.i_sprt_actv.now == 0                              ) or
+					    ((self.i_sprt_prio.now == 0) and (self.i_grfx_bgnd.now == 0))):
+						self.o_colr.nxt <<= self.i_grfx_colr.now
 					else:
-						self.o_colr <<= self.i_sprt_colr
+						self.o_colr.nxt <<= self.i_sprt_colr.now
 
 				if self.g_mark_lines:
-					if ((self.i_xpos >= specs.xnul) and (self.i_xpos <= specs.xnul + 16) and
-					    (self.i_ypos >= specs.ynul) and (self.i_ypos <= specs.yend     )):
-						self.o_colr <<= self.i_ypos[4:0]
+					if ((self.i_xpos.now >= specs.xnul) and (self.i_xpos.now <= specs.xnul + 16) and
+					    (self.i_ypos.now >= specs.ynul) and (self.i_ypos.now <= specs.yend     )):
+						self.o_colr.nxt <<= self.i_ypos.now[4:0]
 
 				#------------------------------------------------------------#
 				#                   FRAME ALIGNMENT SIGNALS                  #
 				#------------------------------------------------------------#
 
-				if (self.i_xpos == specs.xnul):
-					self.o_lstr <<= 1
-					self.xval   <<= 1
-					if (self.i_ypos == specs.ynul):
-						self.yval   <<= 1
-						self.o_fstr <<= 1
+				if (self.i_xpos.now == specs.xnul):
+					self.o_lstr.nxt <<= 1
+					self.xval.nxt   <<= 1
+					if (self.i_ypos.now == specs.ynul):
+						self.yval.nxt   <<= 1
+						self.o_fstr.nxt <<= 1
 
-				if (self.i_xpos == specs.xend):
-					self.o_lend <<= 1
+				if (self.i_xpos.now == specs.xend):
+					self.o_lend.nxt <<= 1
 
-				if (self.i_xpos == specs.xend + 1):
-					self.xval   <<= 0
-					self.o_fstr <<= 0
-					if (self.i_ypos == specs.yend):
-						self.yval <<= 0
+				if (self.i_xpos.now == specs.xend + 1):
+					self.xval.nxt   <<= 0
+					self.o_fstr.nxt <<= 0
+					if (self.i_ypos.now == specs.yend):
+						self.yval.nxt <<= 0
 
-			if self.i_rst:
-				self.o_fstr <<= 0
-				self.o_lstr <<= 0
-				self.o_lend <<= 0
+			if self.i_rst.now:
+				self.o_fstr.nxt <<= 0
+				self.o_lstr.nxt <<= 0
+				self.o_lend.nxt <<= 0
