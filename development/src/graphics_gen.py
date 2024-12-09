@@ -61,6 +61,10 @@ class GraphicsGen(Entity):
 
 		self.bg_colr  = Signal(Array([t_vic_colr]*4), ppl=1)
 
+		self.ecm_ppl  = Signal(Wire(), ppl=0)
+		self.mcm_ppl  = Signal(Wire(), ppl=0)
+		self.bmm_ppl  = Signal(Wire(), ppl=0)
+
 		self.ecm      = Signal(Wire())
 		self.mcm      = Signal(Wire())
 		self.bmm      = Signal(Wire())
@@ -101,7 +105,9 @@ class GraphicsGen(Entity):
 				################################################################
 
 				self.shreg_mc.nxt[1:] <<= self.shreg_mc.now[:-1]
-				self.shreg_sc.nxt     <<= self.shreg_sc.now << 1
+				self.shreg_mc.nxt[0]  <<= 0
+				self.shreg_sc.nxt[:1] <<= self.shreg_sc.now[-1:]
+				self.shreg_sc.nxt[0]  <<= 0
 
 				if (self.i_strb.now // 2) == self.xscroll.now:
 					if self.en_1r.now:
@@ -119,15 +125,21 @@ class GraphicsGen(Entity):
 
 				self.data_4r.nxt <<= self.data_3r.now
 
+				# intentionally delaying the video mode selection flags
+				# (see signal pipeline values)
+				self.ecm_ppl.nxt <<= self.i_regs.now[17][6]
+				self.bmm_ppl.nxt <<= self.i_regs.now[17][5]
+				self.mcm_ppl.nxt <<= self.i_regs.now[22][4]
+
 				if self.i_strb.now == 11:
-					self.ecm.nxt <<= self.i_regs.now[17][6]
-					self.bmm.nxt <<= self.i_regs.now[17][5]
-					self.mcm.nxt <<= self.i_regs.now[22][4]
+					self.ecm.nxt <<= self.ecm_ppl.now
+					self.bmm.nxt <<= self.bmm_ppl.now
+					self.mcm.nxt <<= self.mcm_ppl.now
 				elif self.i_strb.now == 13:
-					self.mcm.nxt <<= self.i_regs.now[22][4]
+					self.mcm.nxt <<= self.mcm_ppl.now
 				elif self.i_strb.now == 15:
-					self.ecm.nxt <<= self.i_regs.now[17][6]
-					self.bmm.nxt <<= self.i_regs.now[17][5]
+					self.ecm.nxt <<= self.ecm_ppl.now
+					self.bmm.nxt <<= self.bmm_ppl.now
 
 
 				if(self.ecm.now == 0) and (self.bmm.now == 0) and (self.mcm.now == 0):
