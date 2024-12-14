@@ -22,6 +22,19 @@
 #  See the License for the specific language governing permissions and         #
 #  limitations under the License.                                              #
 # ---------------------------------------------------------------------------- #
+#                                                                              #
+#  Crucially, the ph0 signal LEADS slightly compared to the DOT clock, so      #
+#  strobe-1 corresponds to the first half-cycle of the VIC clock where ph0     #
+#  is zero for the entire time                                                 #
+#       ______________                 _______________                 _____   #
+#  ph0                |_______________|               |_______________|        #
+#           _   _   _   _   _   _   _   _   _   _   _   _   _   _   _   _      #
+#  dot    _| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_    #
+#                                                                              #
+#  clk  _|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|   #
+#  str                0 1 2 3 4 5 6 7 8 9 A B C D E F 0                        #
+#                                                                              #
+# ---------------------------------------------------------------------------- #
 
 from ezhdl   import *
 from vic_pkg import *
@@ -45,7 +58,8 @@ class Strobe(Entity):
 				self.o_strb.nxt <<= self.o_strb.now + 1
 			self.ph0_1r.nxt <<= self.i_ph0.now
 
-			bl.add(f"[STROBE] strobe = {self.o_strb.now.dump}")
+			if self.o_strb.now[0]:
+				bl.add(f"[STROBE] strobe = {self.o_strb.now.dump}")
 
 			if self.i_rst.now:
 				self.ph0_1r.nxt <<= 1

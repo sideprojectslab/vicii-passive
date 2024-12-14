@@ -53,21 +53,37 @@ class GraphicsGen(Entity):
 
 		self.en_1r    = Signal(Wire())
 		self.grfx_1r  = Signal(t_vic_grfx)
-		self.grfx_2r  = Signal(t_vic_grfx)
 		self.data_1r  = Signal(t_vic_data)
 		self.data_2r  = Signal(t_vic_data)
-		self.data_3r  = Signal(t_vic_data)
-		self.data_4r  = Signal(t_vic_data)
 
-		self.bg_colr  = Signal(Array([t_vic_colr]*4), ppl=1)
+		self.bg_colr  = Signal(Array([t_vic_colr]*4), ppl=2)
 
-		self.ecm_ppl  = Signal(Wire(), ppl=0)
-		self.mcm_ppl  = Signal(Wire(), ppl=0)
-		self.bmm_ppl  = Signal(Wire(), ppl=0)
+		self.ecm_ppl  = Signal(Wire(), ppl=2)
+		self.mcm_ppl  = Signal(Wire(), ppl=2)
+		self.bmm_ppl  = Signal(Wire(), ppl=2)
 
 		self.ecm      = Signal(Wire())
 		self.mcm      = Signal(Wire())
 		self.bmm      = Signal(Wire())
+		self.mcm_old  = Signal(Wire())
+
+		self.bgnd_sc  = Signal(Wire())
+		self.bgnd_mc  = Signal(Wire())
+
+	@classmethod
+	def get_mode(cls, ecm, bmm, mcm):
+		if(ecm == 0) and (bmm == 0) and (mcm == 0):
+			return MODE.STD_TEXT # single-color
+		elif (ecm == 0) and (bmm == 0) and (mcm == 1):
+			return MODE.MCL_TEXT # multi-color decided by the color memory
+		elif (ecm == 0) and (bmm == 1) and (mcm == 0):
+			return  MODE.STD_BMAP # single-color
+		elif (ecm == 0) and (bmm == 1) and (mcm == 1):
+			return MODE.MCL_BMAP # multi-color
+		elif (ecm == 1) and (bmm == 0) and (mcm == 0):
+			return MODE.ECM_TEXT
+		else:
+			return MODE.INVALID
 
 
 	def _run(self):
@@ -75,16 +91,13 @@ class GraphicsGen(Entity):
 		mode     = Enum(MODE)
 		mc_flag  = Wire()
 		gfx_colr = Array([t_vic_colr]*4)
+		gfx_val  = Unsigned().bits(2)
+		gfx_bgnd = Wire()
 		bg_sel   = Wire()
 
 		if self.i_clk.posedge():
 
 			if (self.i_strb.now & 1):
-
-				# this should probably be subject to some condition, like the video matrix
-				# actually outputting data
-				self.grfx_1r.nxt <<= self.i_grfx.now
-				self.data_1r.nxt <<= self.i_data.now
 
 				################################################################
 				#                    LATCHING NEW CHARACTER                    #
@@ -93,8 +106,8 @@ class GraphicsGen(Entity):
 				if (self.i_strb.now == 15):
 					self.xscroll.nxt <<= self.i_regs.now[22][3:0]
 					if self.i_en.now:
-						self.grfx_2r.nxt <<= self.grfx_1r.now
-						self.data_2r.nxt <<= self.data_1r.now
+						self.grfx_1r.nxt <<= self.i_grfx.now
+						self.data_1r.nxt <<= self.i_data.now
 						self.en_1r  .nxt <<= 1
 					else:
 						self.data_1r.nxt <<= 0
@@ -114,16 +127,15 @@ class GraphicsGen(Entity):
 
 						bl.add("[GFX-GEN] Loading Shift Register")
 
-						self.data_3r.nxt <<= self.data_2r.now
+						self.data_2r.nxt <<= self.data_1r.now
 						# loading the shift registers
 						for i in range(4):
 							j = i*2
-							self.shreg_mc.nxt[j  ] <<= self.grfx_2r.now[j+2:j]
-							self.shreg_mc.nxt[j+1] <<= self.grfx_2r.now[j+2:j]
+							self.shreg_mc.nxt[j  ] <<= self.grfx_1r.now[j+2:j]
+							self.shreg_mc.nxt[j+1] <<= self.grfx_1r.now[j+2:j]
 
-						self.shreg_sc.nxt[8:0] <<= self.grfx_2r.now
+						self.shreg_sc.nxt[8:0] <<= self.grfx_1r.now
 
-				self.data_4r.nxt <<= self.data_3r.now
 
 				# intentionally delaying the video mode selection flags
 				# (see signal pipeline values)
@@ -131,29 +143,29 @@ class GraphicsGen(Entity):
 				self.bmm_ppl.nxt <<= self.i_regs.now[17][5]
 				self.mcm_ppl.nxt <<= self.i_regs.now[22][4]
 
+				if self.i_strb.now == 3:
+					self.ecm.nxt     <<= self.ecm.nxt | self.ecm_ppl.now
+					self.bmm.nxt     <<= self.bmm.nxt | self.bmm_ppl.now
+					bl.add(f"[GFX-GEN] Latching ECM/BMM 1:")
+					bl.add(f"    ECM = {self.ecm.nxt.dump}")
+					bl.add(f"    BMM = {self.bmm.nxt.dump}")
+
+				if self.i_strb.now == 5:
+					self.ecm.nxt     <<= self.ecm.nxt & self.ecm_ppl.now
+					self.bmm.nxt     <<= self.bmm.nxt & self.bmm_ppl.now
+					bl.add(f"[GFX-GEN] Latching ECM/BMM 2:")
+					bl.add(f"    ECM = {self.ecm.nxt.dump}")
+					bl.add(f"    BMM = {self.bmm.nxt.dump}")
+
 				if self.i_strb.now == 11:
-					self.ecm.nxt <<= self.ecm_ppl.now
-					self.bmm.nxt <<= self.bmm_ppl.now
-					self.mcm.nxt <<= self.mcm_ppl.now
-				elif self.i_strb.now == 13:
-					self.mcm.nxt <<= self.mcm_ppl.now
-				elif self.i_strb.now == 15:
-					self.ecm.nxt <<= self.ecm_ppl.now
-					self.bmm.nxt <<= self.bmm_ppl.now
-
-
-				if(self.ecm.now == 0) and (self.bmm.now == 0) and (self.mcm.now == 0):
-					mode <<= MODE.STD_TEXT # single-color
-				elif (self.ecm.now == 0) and (self.bmm.now == 0) and (self.mcm.now == 1):
-					mode <<= MODE.MCL_TEXT # multi-color decided by the color memory
-				elif (self.ecm.now == 0) and (self.bmm.now == 1) and (self.mcm.now == 0):
-					mode <<= MODE.STD_BMAP # single-color
-				elif (self.ecm.now == 0) and (self.bmm.now == 1) and (self.mcm.now == 1):
-					mode <<= MODE.MCL_BMAP # multi-color
-				elif (self.ecm.now == 1) and (self.bmm.now == 0) and (self.mcm.now == 0):
-					mode <<= MODE.ECM_TEXT
-				else:
-					mode <<= MODE.INVALID
+					self.mcm.nxt     <<= self.mcm_ppl.now
+					#self.mcm_old.nxt <<= self.mcm_old.now & self.mcm_ppl.now
+					bl.add(f"[GFX-GEN] Latching MCM 1:")
+					bl.add(f"    MCM = {self.mcm.nxt.dump}")
+				if self.i_strb.now == 15:
+					self.mcm_old.nxt <<= self.mcm.now
+					bl.add(f"[GFX-GEN] Latching MCM 2:")
+					bl.add(f"    MCM (old) = {self.mcm.now.dump}")
 
 				################################################################
 				#                       COLOR SELECTION                        #
@@ -163,30 +175,49 @@ class GraphicsGen(Entity):
 				self.bg_colr.nxt[1] <<= self.i_regs.now[34][4:0]
 				self.bg_colr.nxt[2] <<= self.i_regs.now[35][4:0]
 				self.bg_colr.nxt[3] <<= self.i_regs.now[36][4:0]
-				bg_sel              <<= self.data_4r.now[8:6]
+				bg_sel              <<= self.data_2r.now[8:6]
 
-				if self.i_regs.now[33][4:0] != self.bg_colr.now[0]:
-					pass
+				# pixel value selection is based on delayed mode flags
+				mc_flag <<= self.data_2r.now[11]
+
+				if self.mcm_old.now:
+					if self.bmm.now | mc_flag:
+						gfx_val  <<= self.shreg_mc.now[-1]
+						gfx_bgnd <<= not self.shreg_mc.now[-1][1]
+					else:
+						gfx_val  <<= join(self.shreg_sc.now[-1], self.shreg_sc.now[-1])
+						gfx_bgnd <<= not self.shreg_sc.now[-1]
+				else:
+					if self.bmm.now | mc_flag:
+						gfx_val  <<= self.shreg_sc.now[-1] << 1
+						gfx_bgnd <<= not self.shreg_sc.now[-1]
+					else:
+						gfx_val  <<= join(self.shreg_sc.now[-1], self.shreg_sc.now[-1])
+						gfx_bgnd <<= not self.shreg_sc.now[-1]
+
+
+				# color selection is based on current mode flags
+				mode <<= self.get_mode(self.ecm.now, self.bmm.now, self.mcm.now)
 
 				if (mode == MODE.STD_TEXT):
 					gfx_colr[0] <<= self.bg_colr.now[0]
-					gfx_colr[1] <<= self.data_4r.now[12:8]
+					gfx_colr[2] <<= self.data_2r.now[12:8]
 
 				elif (mode == MODE.MCL_TEXT):
 					gfx_colr[0] <<= self.bg_colr.now[0]
 					gfx_colr[1] <<= self.bg_colr.now[1]
 					gfx_colr[2] <<= self.bg_colr.now[2]
-					gfx_colr[3] <<= self.data_4r.now[11:8]
+					gfx_colr[3] <<= self.data_2r.now[11:8]
 
 				elif (mode ==  MODE.STD_BMAP):
-					gfx_colr[0] <<= self.data_4r.now[4:0]
-					gfx_colr[1] <<= self.data_4r.now[8:4]
+					gfx_colr[0] <<= self.data_2r.now[4:0]
+					gfx_colr[2] <<= self.data_2r.now[8:4]
 
 				elif (mode == MODE.MCL_BMAP):
 					gfx_colr[0] <<= self.bg_colr.now[0]
-					gfx_colr[1] <<= self.data_4r.now[8:4]
-					gfx_colr[2] <<= self.data_4r.now[4:0]
-					gfx_colr[3] <<= self.data_4r.now[12:8]
+					gfx_colr[1] <<= self.data_2r.now[8:4]
+					gfx_colr[2] <<= self.data_2r.now[4:0]
+					gfx_colr[3] <<= self.data_2r.now[12:8]
 
 				elif (mode == MODE.ECM_TEXT):
 					match bg_sel:
@@ -198,61 +229,46 @@ class GraphicsGen(Entity):
 							gfx_colr[0] <<= self.bg_colr.now[2]
 						case 0b11:
 							gfx_colr[0] <<= self.bg_colr.now[3]
-					gfx_colr[1] <<= self.data_4r.now[12:8]
+					gfx_colr[2] <<= self.data_2r.now[12:8]
 
 				else:
-					pass
+					gfx_colr[0] <<= 0
+					gfx_colr[1] <<= 0
+					gfx_colr[2] <<= 0
+					gfx_colr[3] <<= 0
 
 				################################################################
 				#                            OUTPUT                            #
 				################################################################
 
-				mc_flag <<= self.data_3r.now[11]
-
-				if (mode == MODE.STD_TEXT):
-					if self.shreg_sc.now[-1] == 0:
-						self.o_colr.nxt <<= gfx_colr[0]
-						self.o_bgnd.nxt <<= 1
-					else:
-						self.o_colr.nxt <<= gfx_colr[1]
-						self.o_bgnd.nxt <<= 0
-
-				elif (mode == MODE.MCL_TEXT):
-					if (mc_flag):
-						self.o_colr.nxt <<= gfx_colr[self.shreg_mc.now[-1]]
-						self.o_bgnd.nxt <<= not self.shreg_mc.now[-1][1]
-					elif self.shreg_sc.now[-1] == 0:
-						self.o_colr.nxt <<= gfx_colr[0]
-						self.o_bgnd.nxt <<= 1
-					else:
-						self.o_colr.nxt <<= gfx_colr[3]
-						self.o_bgnd.nxt <<= 0
-
-				elif (mode == MODE.STD_BMAP) or (mode == MODE.ECM_TEXT):
-					if self.shreg_sc.now[-1] == 0:
-						self.o_colr.nxt <<= gfx_colr[0]
-					else:
-						self.o_colr.nxt <<= gfx_colr[1]
-					self.o_bgnd.nxt <<= not self.shreg_sc.now[-1]
-
-				elif (mode == MODE.MCL_BMAP):
-					self.o_colr.nxt <<= gfx_colr[self.shreg_mc.now[-1]]
-					self.o_bgnd.nxt <<= not self.shreg_mc.now[-1][1]
-
-				else:
-					self.o_bgnd.nxt <<= not self.shreg_sc.now[-1]
+				self.o_colr.nxt <<= gfx_colr[gfx_val]
+				self.o_bgnd.nxt <<= gfx_bgnd
 
 				################################################################
 				#                           LOGGING                            #
 				################################################################
+
+				self.bgnd_sc.nxt <<= not self.shreg_sc.now[-1]
+				self.bgnd_mc.nxt <<= not self.shreg_mc.now[-1][1]
 
 				bl.add("[GFX-GEN] Graphics Colors:")
 				bl.add(f"    {bl.COLOR[gfx_colr[0]]}")
 				bl.add(f"    {bl.COLOR[gfx_colr[1]]}")
 				bl.add(f"    {bl.COLOR[gfx_colr[2]]}")
 				bl.add(f"    {bl.COLOR[gfx_colr[3]]}")
+				bl.add("[GFX-GEN] Background Colors:")
+				bl.add(f"    {bl.COLOR[self.bg_colr.now[0]]}")
+				bl.add(f"    {bl.COLOR[self.bg_colr.now[1]]}")
+				bl.add(f"    {bl.COLOR[self.bg_colr.now[2]]}")
+				bl.add(f"    {bl.COLOR[self.bg_colr.now[3]]}")
 				bl.add("[GFX-GEN] Video Mode:")
 				bl.add(f"    {mode.dump}")
+				bl.add("[GFX-GEN] Color Bits:")
+				bl.add(f"    SC: {self.shreg_sc.now[-1].dump}")
+				bl.add(f"    MC: {self.shreg_mc.now[-1].dump}")
+				bl.add("[GFX-GEN] Is Background:")
+				bl.add(f"    SC: {self.bgnd_sc.now.dump}")
+				bl.add(f"    MC: {self.bgnd_mc.now.dump}")
 				bl.add("[GFX-GEN] Xscroll:")
 				bl.add(f"    {self.xscroll.now.dump}")
 

@@ -30,7 +30,7 @@ from registers import *
 import bus_logger as bl
 
 PPL_BORD = 10
-PPL_COLR = 2
+PPL_COLR = 3
 
 class Border(Entity):
 	def __init__(self):
