@@ -69,7 +69,7 @@ class Sync(Entity):
 
 			shreg <<= join(self.shreg_old.now[8:], self.i_a.now[2:])
 
-			if self.i_strb.now == 2:
+			if self.i_strb.now == 1:
 
 				self.shreg_old.nxt <<= shreg
 

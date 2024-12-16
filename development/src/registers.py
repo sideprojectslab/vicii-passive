@@ -45,7 +45,7 @@ class Registers(Entity):
 
 	def _run(self):
 		if self.i_clk.posedge():
-			if (self.i_strb.now == 10) and (self.i_cs.now == 0) and (self.i_rw.now == 0):
+			if (self.i_strb.now == 9) and (self.i_cs.now == 0) and (self.i_rw.now == 0):
 				self.wen  .nxt <<= 1
 				self.a_tmp.nxt <<= self.i_a.now
 				self.d_tmp.nxt <<= self.i_db.now[8:0]

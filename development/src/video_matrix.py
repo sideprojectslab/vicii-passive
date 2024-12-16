@@ -58,7 +58,7 @@ class VideoMatrix(Entity):
 			CYCL_REF = specs.CYCL_REF
 
 			# c-accesses are most stable on strobe 14-15
-			if (self.i_strb.now == 15):
+			if (self.i_strb.now == 13):
 				if (self.i_cycl.now == CYCL_REF):
 					self.ram_wadd.nxt <<= 0
 				elif (self.ram_wadd.now < RAM_LEN - 1):

@@ -125,6 +125,7 @@ class VicPassive(Entity):
 		self.e_gfx_gen.i_en   <<= self.e_video_matrix.o_en
 		self.e_gfx_gen.i_regs <<= self.e_registers.o_regs
 		self.e_gfx_gen.i_strb <<= self.e_strobe.o_strb
+		self.e_gfx_gen.i_vbrd <<= self.e_border.o_vbrd
 
 		# graphics mux
 		self.e_gfx_mux = GraphicsMux(g_mark_lines = False)

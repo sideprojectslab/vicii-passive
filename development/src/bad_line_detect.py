@@ -43,7 +43,7 @@ class BadLineDetect(Entity):
 		if self.i_clk.posedge():
 			specs = self.i_specs.now
 
-			if (self.i_strb.now == 10):
+			if (self.i_strb.now == 9):
 				if (self.i_cycl.now == specs.CYCL_REF - 1):
 					self.o_bdln.nxt <<= 0
 				else:

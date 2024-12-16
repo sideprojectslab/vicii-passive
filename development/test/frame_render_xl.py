@@ -93,16 +93,20 @@ class FrameRenderXl(Entity):
 	def _run(self):
 		if self.i_clk.negedge():
 			if self.i_push.now == 1:
-				if(self.xpos > MAX_HRES - 1):
-					self.xpos = MAX_HRES - 1
-
-				if(self.ypos > MAX_VRES - 1):
-					self.ypos = MAX_VRES - 1
+#				if(self.xpos > MAX_HRES - 1):
+#					self.xpos = MAX_HRES - 1
+#
+#				if(self.ypos > MAX_VRES - 1):
+#					self.ypos = MAX_VRES - 1
 
 				if self.i_lstr.now == 1:
 					self.xpos = 0
 					if self.i_fstr.now == 1:
 						self.ypos = 0
+					else:
+						self.ypos += 1
+				else:
+					self.xpos += 1
 
 				color = self.color[self.i_colr.now]
 				color_txt = self.color_txt[self.i_colr.now]
@@ -110,18 +114,12 @@ class FrameRenderXl(Entity):
 				fill = PatternFill(start_color=color, end_color=color, fill_type='solid')
 				alignment = Alignment(horizontal="left", vertical="top")
 
-				self.sh.cell(row=self.ypos+1, column=self.xpos+1, value= "     \n" + "\n".join(bl.log))
+				if (self.ypos >= 172) and (self.ypos < 188):
+					self.sh.cell(row=self.ypos+1, column=self.xpos+1, value= "     \n" + "\n".join(bl.log))
 				self.sh.cell(row=self.ypos+1, column=self.xpos+1).fill = fill
 				self.sh.cell(row=self.ypos+1, column=self.xpos+1).font = font
 				self.sh.cell(row=self.ypos+1, column=self.xpos+1).alignment = alignment
 				bl.clear()
-
-				self.xpos += 1
-				if self.i_lend.now == 1:
-					self.ypos += 1
-
-			if self.i_clk.now:
-				pass
 
 
 	def save(self, path):

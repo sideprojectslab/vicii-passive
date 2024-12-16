@@ -42,6 +42,7 @@ class Border(Entity):
 		self.i_xpos  = Input (t_vic_ppos)
 		self.i_ypos  = Input (t_vic_ppos)
 		self.i_regs  = Input (t_vic_regs)
+		self.o_vbrd  = Output(Wire(), ppl=PPL_BORD - 3)
 		self.o_bord  = Output(Wire(), ppl=PPL_BORD)
 		self.o_colr  = Output(t_vic_colr, ppl=PPL_COLR)
 
@@ -92,14 +93,9 @@ class Border(Entity):
 				elif (self.i_xpos.now == edge_ll) and (ff_vert == 0):
 					ff_main <<= 0
 
-				if (ff_main == 0) and (ff_vert == 0):
-					self.o_bord.nxt <<= 0
-				else:
-					self.o_bord.nxt <<= 1
-					self.o_colr.nxt <<= reg_ec
-
-					if reg_ec != 0:
-						pass
+				self.o_vbrd.nxt <<= ff_vert
+				self.o_bord.nxt <<= ff_main
+				self.o_colr.nxt <<= reg_ec
 
 				self.ff_vert.nxt <<= ff_vert
 				self.ff_main.nxt <<= ff_main
@@ -108,8 +104,11 @@ class Border(Entity):
 					bl.add("[BORDER] On")
 				else:
 					bl.add("[BORDER] Off")
+				bl.add(f"    Left Edge  = {edge_ll}")
+				bl.add(f"    Right Edge = {edge_rr}")
+				bl.add(f"    Top Edge   = {edge_hi}")
+				bl.add(f"    Bot Edge   = {edge_lo}")
 
 			if self.i_rst.now:
 				self.ff_main.nxt <<= 1
 				self.ff_vert.nxt <<= 1
-				self.o_bord .nxt <<= 1

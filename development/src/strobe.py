@@ -24,7 +24,7 @@
 # ---------------------------------------------------------------------------- #
 #                                                                              #
 #  Crucially, the ph0 signal LEADS slightly compared to the DOT clock, so      #
-#  strobe-1 corresponds to the first half-cycle of the VIC clock where ph0     #
+#  strobe-0 corresponds to the first half-cycle of the VIC clock where ph0     #
 #  is zero for the entire time                                                 #
 #       ______________                 _______________                 _____   #
 #  ph0                |_______________|               |_______________|        #
@@ -32,7 +32,7 @@
 #  dot    _| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_| |_    #
 #                                                                              #
 #  clk  _|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|_|   #
-#  str                0 1 2 3 4 5 6 7 8 9 A B C D E F 0                        #
+#  str                  0 1 2 3 4 5 6 7 8 9 A B C D E F 0                      #
 #                                                                              #
 # ---------------------------------------------------------------------------- #
 
@@ -52,7 +52,7 @@ class Strobe(Entity):
 	def _run(self):
 		if self.i_clk.posedge():
 			if self.ph0_1r.now == 1 and self.i_ph0.now == 0:
-				self.o_strb.nxt <<= 1
+				self.o_strb.nxt <<= 0
 				pass
 			else:
 				self.o_strb.nxt <<= self.o_strb.now + 1
@@ -63,7 +63,7 @@ class Strobe(Entity):
 
 			if self.i_rst.now:
 				self.ph0_1r.nxt <<= 1
-				self.o_strb.nxt <<= 0
+				self.o_strb.nxt <<= 15
 
 	def _reset(self):
 		pass
