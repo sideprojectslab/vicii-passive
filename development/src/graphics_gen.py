@@ -48,32 +48,28 @@ class GraphicsGen(Entity):
 		self.o_bgnd    = Output(Wire())
 		self.o_colr    = Output(t_vic_colr)
 
-		self.shreg     = Signal(Unsigned().bits(SHREG_LEN))
-		self.shreg_1r  = Signal(Unsigned().bits(SHREG_LEN))
+		self.shreg     = Signal(Unsigned().bits(SHREG_LEN), ppl=0)
 		self.xscroll   = Signal(Unsigned().upto(7))
 
 		self.en_1r     = Signal(Wire())
 		self.grfx_1r   = Signal(t_vic_grfx)
 		self.data_1r   = Signal(t_vic_data)
 		self.data_2r   = Signal(t_vic_data)
-		self.mc_phy    = Signal(Wire())
-		self.mc_phy_1r = Signal(Wire())
+		self.mc_phy    = Signal(Wire(), ppl=0)
 
-		self.bg_colr   = Signal(Array([t_vic_colr]*4), ppl=2)
+		self.bg_colr   = Signal(Array([t_vic_colr]*4), ppl=1)
 
 		self.ecm_ppl   = Signal(Wire(), ppl=2)
 		self.mcm_ppl   = Signal(Wire(), ppl=2)
 		self.bmm_ppl   = Signal(Wire(), ppl=2)
 
-		self.ecm       = Signal(Wire(), ppl=0)
-		self.mcm       = Signal(Wire(), ppl=0)
-		self.bmm       = Signal(Wire(), ppl=0)
-		self.mcm_old   = Signal(Wire())
+		self.ecm        = Signal(Wire(), ppl=0)
+		self.mcm        = Signal(Wire(), ppl=0)
+		self.bmm        = Signal(Wire(), ppl=0)
+		self.mcm_old    = Signal(Wire(), ppl=0)
 
 		self.gfx_val   = Signal(Unsigned().bits(2))
 		self.gfx_bgnd  = Signal(Wire())
-
-		self.bgnd_sc   = Signal(Wire())
 
 
 	@classmethod
@@ -110,7 +106,7 @@ class GraphicsGen(Entity):
 				################################################################
 
 				if (self.i_strb.now == 15):
-					if not self.i_vbrd.now:
+					if self.i_en.now and not self.i_vbrd.now:
 						self.xscroll.nxt <<= self.i_regs.now[22][3:0]
 
 					if self.i_en.now:
@@ -125,8 +121,8 @@ class GraphicsGen(Entity):
 				#                     LATCHING MODE FLAGS                      #
 				################################################################
 
-				self.mc_phy_1r.nxt <<= self.mc_phy.now
-				self.mc_phy.nxt    <<= not self.mc_phy.now
+				self.mc_phy.nxt  <<= not self.mc_phy.tip
+				self.mcm_old.nxt <<= self.mcm_old.tip
 
 				# intentionally delaying the video mode selection flags
 				# (see signal pipeline values)
@@ -134,45 +130,37 @@ class GraphicsGen(Entity):
 				self.bmm_ppl.nxt <<= self.i_regs.now[17][5]
 				self.mcm_ppl.nxt <<= self.i_regs.now[22][4]
 
-				if self.i_strb.now == 3:
-					self.ecm.nxt <<= self.ecm_ppl.now
-					self.bmm.nxt <<= self.bmm_ppl.now
-					bl.add(f"[GFX-GEN] Latching ECM/BMM 1:")
-					bl.add(f"    ECM = {self.ecm.nxt.dump}")
-					bl.add(f"    BMM = {self.bmm.nxt.dump}")
-
-				if self.i_strb.now == 11:
-					self.mcm.nxt <<= self.mcm_ppl.now
-					bl.add(f"[GFX-GEN] Latching MCM 1:")
-					bl.add(f"    MCM = {self.mcm.nxt.dump}")
-
 				if self.i_strb.now == 1:
+					self.ecm.nxt <<= self.ecm.now | self.ecm_ppl.now
+					self.bmm.nxt <<= self.bmm.now | self.bmm_ppl.now
+
+				if self.i_strb.now == 3:
+					self.ecm.nxt <<= self.ecm.now & self.ecm_ppl.now
+					self.bmm.nxt <<= self.bmm.now & self.bmm_ppl.now
+
+				if self.i_strb.now == 9:
+					self.mcm.nxt <<= self.mcm_ppl.now
+
+				if self.i_strb.now == 15:
 					self.mcm_old.nxt <<= self.mcm.now
-					if self.mcm.now != self.mcm_old.now:
+					if self.mcm.now != self.mcm_old.tip:
 						self.mc_phy.nxt <<= 1
-						self.mc_phy_1r.nxt <<= 1
-						pass
-					bl.add(f"[GFX-GEN] Latching MCM 2:")
-					bl.add(f"    MCM (old) = {self.mcm.now.dump}")
 
 				################################################################
 				#                    LOADING SHIFT REGISTER                    #
 				################################################################
 
 				# advancing shift register
-				self.shreg_1r.nxt  <<= self.shreg.now
-				self.shreg.nxt[:1] <<= self.shreg.now[-1:]
+				self.shreg.nxt[:1] <<= self.shreg.tip[-1:]
 				self.shreg.nxt[0]  <<= 0
 
 				if (self.i_strb.now // 2) == self.xscroll.now:
+					# resetting the multi-color phase
 					self.mc_phy.nxt <<= 0
-
 					if self.en_1r.now and not self.i_vbrd.now:
 						bl.add("[GFX-GEN] Loading Shift Register")
-
 						# latching delayed data
 						self.data_2r.nxt <<= self.data_1r.now
-
 						# loading the shift registers
 						self.shreg.nxt[8:0] <<= self.grfx_1r.now
 
@@ -189,29 +177,25 @@ class GraphicsGen(Entity):
 				# pixel value selection is based on delayed mode flags
 				mc_flag <<= self.data_2r.now[11]
 
-				bl.add(f"[GFX-GEN] MC-PHASE = {self.mc_phy.now}")
+#				bl.add(f"[GFX-GEN] MC-PHASE = {self.mc_phy.now}")
 				if self.mcm_old.now:
 					if self.bmm.now | mc_flag:
-						bl.add(f"[GFX-GEN] Case A: bmm={self.bmm.now}, mc={mc_flag}")
 						if self.mc_phy.now == 0:
-							gfx_val  <<= self.shreg_1r.now[:-2]
-							gfx_bgnd <<= not self.shreg_1r.now[-1]
+							gfx_val  <<= self.shreg.now[:-2]
+							gfx_bgnd <<= not self.shreg.now[-1]
 						else:
 							gfx_val  <<= self.gfx_val.now
 							gfx_bgnd <<= self.gfx_bgnd.now
 					else:
-						bl.add(f"[GFX-GEN] Case B: bmm={self.bmm.now}, mc={mc_flag}")
-						gfx_val  <<= join(self.shreg_1r.now[-1], self.shreg_1r.now[-1])
-						gfx_bgnd <<= not self.shreg_1r.now[-1]
+						gfx_val  <<= join(self.shreg.now[-1], self.shreg.now[-1])
+						gfx_bgnd <<= not self.shreg.now[-1]
 				else:
 					if self.bmm.now | mc_flag:
-						bl.add(f"[GFX-GEN] Case C: bmm={self.bmm.now}, mc={mc_flag}")
-						gfx_val  <<= self.shreg_1r.now[-1] << 1
-						gfx_bgnd <<= not self.shreg_1r.now[-1]
+						gfx_val  <<= self.shreg.now[-1] << 1
+						gfx_bgnd <<= not self.shreg.now[-1]
 					else:
-						bl.add(f"[GFX-GEN] Case D: bmm={self.bmm.now}, mc={mc_flag}")
-						gfx_val  <<= join(self.shreg_1r.now[-1], self.shreg_1r.now[-1])
-						gfx_bgnd <<= not self.shreg_1r.now[-1]
+						gfx_val  <<= join(self.shreg.now[-1], self.shreg.now[-1])
+						gfx_bgnd <<= not self.shreg.now[-1]
 
 				# saving former pixel values
 				self.gfx_val.nxt  <<= gfx_val
@@ -278,8 +262,6 @@ class GraphicsGen(Entity):
 				#                           LOGGING                            #
 				################################################################
 
-				self.bgnd_sc.nxt <<= not self.shreg_1r.now[-1]
-
 				bl.add(f"[GFX-GEN] Data & GFX:")
 				bl.add(f"    {bin(data_colr)}")
 				bl.add(f"    {bin(gfx_val)}")
@@ -297,8 +279,8 @@ class GraphicsGen(Entity):
 				bl.add(f"    {mode.dump}")
 				bl.add("[GFX-GEN] Is Background:")
 				bl.add(f"    {gfx_bgnd.dump}")
-				bl.add("[GFX-GEN] Xscroll:")
-				bl.add(f"    {self.xscroll.now.dump}")
+#				bl.add("[GFX-GEN] Xscroll:")
+#				bl.add(f"    {self.xscroll.now.dump}")
 
 		if self.i_rst.now:
 			pass

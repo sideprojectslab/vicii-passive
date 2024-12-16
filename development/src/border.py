@@ -29,8 +29,8 @@ from registers import *
 
 import bus_logger as bl
 
-PPL_BORD = 10
-PPL_COLR = 3
+PPL_BORD = 9
+PPL_COLR = 2
 
 class Border(Entity):
 	def __init__(self):
@@ -42,7 +42,7 @@ class Border(Entity):
 		self.i_xpos  = Input (t_vic_ppos)
 		self.i_ypos  = Input (t_vic_ppos)
 		self.i_regs  = Input (t_vic_regs)
-		self.o_vbrd  = Output(Wire(), ppl=PPL_BORD - 3)
+		self.o_vbrd  = Output(Wire(), ppl=PPL_BORD - 4)
 		self.o_bord  = Output(Wire(), ppl=PPL_BORD)
 		self.o_colr  = Output(t_vic_colr, ppl=PPL_COLR)
 
