@@ -39,9 +39,10 @@ class GraphicsGen(Entity):
 		self.i_clk     = Input (Wire())
 		self.i_rst     = Input (Wire())
 		self.i_strb    = Input (t_vic_strb)
-		self.i_en      = Input (Wire())
 		self.i_vbrd    = Input (Wire())
 		self.i_regs    = Input (t_vic_regs)
+
+		self.i_en      = Input (Wire())
 		self.i_grfx    = Input (t_vic_grfx)
 		self.i_data    = Input (t_vic_data)
 
@@ -51,9 +52,9 @@ class GraphicsGen(Entity):
 		self.shreg     = Signal(Unsigned().bits(SHREG_LEN))
 		self.xscroll   = Signal(Unsigned().upto(7))
 
-		self.en_1r     = Signal(Wire())
-		self.grfx_1r   = Signal(t_vic_grfx)
-		self.data_1r   = Signal(t_vic_data)
+		self.en_1r     = Signal(Wire()    , ppl=1)
+		self.grfx_1r   = Signal(t_vic_grfx, ppl=1)
+		self.data_1r   = Signal(t_vic_data, ppl=1)
 		self.data_2r   = Signal(t_vic_data)
 		self.mc_phy    = Signal(Wire())
 
@@ -105,9 +106,13 @@ class GraphicsGen(Entity):
 				#                    LATCHING NEW CHARACTER                    #
 				################################################################
 
-				self.en_1r.nxt <<= self.en_1r.tip
-
 				if (self.i_strb.now == 15):
+
+					# just advancing the pipeline
+					self.en_1r.nxt   <<= self.en_1r.tip
+					self.grfx_1r.nxt <<= self.grfx_1r.tip
+					self.data_1r.nxt <<= self.data_1r.tip
+
 					if self.i_en.now and not self.i_vbrd.now:
 						self.xscroll.nxt <<= self.i_regs.now[22][3:0]
 

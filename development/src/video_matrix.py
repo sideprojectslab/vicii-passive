@@ -41,9 +41,9 @@ class VideoMatrix(Entity):
 		self.i_bdln     = Input (Wire())
 		self.i_ypos     = Input (t_vic_ppos)
 		self.i_db       = Input (t_vic_data)
-		self.o_cc       = Output(t_vic_data, ppl=1)
-		self.o_gg       = Output(t_vic_grfx, ppl=1)
-		self.o_en       = Output(Wire()    , ppl=1)
+		self.o_cc       = Output(t_vic_data)
+		self.o_gg       = Output(t_vic_grfx)
+		self.o_en       = Output(Wire()    )
 
 		self.ram        = Signal(Array([t_vic_data]*RAM_LEN))
 		self.ram_wadd   = Signal(Unsigned().span(RAM_LEN))
@@ -102,14 +102,9 @@ class VideoMatrix(Entity):
 				if ((self.count_cycl.now != RAM_LEN) and
 				    (self.i_ypos.now >= specs.yfvc ) and
 				    (self.i_ypos.now <= specs.ylvc )):
-
 					self.o_en.nxt <<= 1
-					if (self.i_bdln.now == 1) and self.g_mark_bdln:
-						self.o_gg.nxt <<= 0xff
-						self.o_cc.nxt <<= 0x3ff
-					else:
-						self.o_gg.nxt <<= self.i_db.now[8:0]
-						self.o_cc.nxt <<= self.ram.now[self.ram_radd.now]
+					self.o_gg.nxt <<= self.i_db.now[8:0]
+					self.o_cc.nxt <<= self.ram.now[self.ram_radd.now]
 
 				elif (self.count_cycl.now != RAM_LEN):
 					self.o_en.nxt <<= 1
