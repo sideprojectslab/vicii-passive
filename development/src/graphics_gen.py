@@ -48,14 +48,14 @@ class GraphicsGen(Entity):
 		self.o_bgnd    = Output(Wire())
 		self.o_colr    = Output(t_vic_colr)
 
-		self.shreg     = Signal(Unsigned().bits(SHREG_LEN), ppl=0)
+		self.shreg     = Signal(Unsigned().bits(SHREG_LEN))
 		self.xscroll   = Signal(Unsigned().upto(7))
 
 		self.en_1r     = Signal(Wire())
 		self.grfx_1r   = Signal(t_vic_grfx)
 		self.data_1r   = Signal(t_vic_data)
 		self.data_2r   = Signal(t_vic_data)
-		self.mc_phy    = Signal(Wire(), ppl=0)
+		self.mc_phy    = Signal(Wire())
 
 		self.bg_colr   = Signal(Array([t_vic_colr]*4), ppl=1)
 
@@ -63,10 +63,10 @@ class GraphicsGen(Entity):
 		self.mcm_ppl   = Signal(Wire(), ppl=2)
 		self.bmm_ppl   = Signal(Wire(), ppl=2)
 
-		self.ecm        = Signal(Wire(), ppl=0)
-		self.mcm        = Signal(Wire(), ppl=0)
-		self.bmm        = Signal(Wire(), ppl=0)
-		self.mcm_old    = Signal(Wire(), ppl=0)
+		self.ecm        = Signal(Wire())
+		self.mcm        = Signal(Wire())
+		self.bmm        = Signal(Wire())
+		self.mcm_old    = Signal(Wire())
 
 		self.gfx_val   = Signal(Unsigned().bits(2))
 		self.gfx_bgnd  = Signal(Wire())
@@ -104,6 +104,8 @@ class GraphicsGen(Entity):
 				################################################################
 				#                    LATCHING NEW CHARACTER                    #
 				################################################################
+
+				self.en_1r.nxt <<= self.en_1r.tip
 
 				if (self.i_strb.now == 15):
 					if self.i_en.now and not self.i_vbrd.now:
@@ -155,15 +157,18 @@ class GraphicsGen(Entity):
 				self.shreg.nxt[0]  <<= 0
 
 				if (self.i_strb.now // 2) == self.xscroll.now:
-					# resetting the multi-color phase
-					self.mc_phy.nxt <<= 0
+					# resetting the multi-color phase if data is enabled or by a
+					# small amount into the right border. To be seen because it
+					# seems a little too "ad-hoc" as a fix
+					if self.en_1r.now or (self.i_strb.now < 7):
+						self.mc_phy.nxt <<= 0
+
 					if self.en_1r.now and not self.i_vbrd.now:
 						bl.add("[GFX-GEN] Loading Shift Register")
 						# latching delayed data
 						self.data_2r.nxt <<= self.data_1r.now
 						# loading the shift registers
 						self.shreg.nxt[8:0] <<= self.grfx_1r.now
-
 
 				################################################################
 				#                       COLOR SELECTION                        #
@@ -177,7 +182,7 @@ class GraphicsGen(Entity):
 				# pixel value selection is based on delayed mode flags
 				mc_flag <<= self.data_2r.now[11]
 
-#				bl.add(f"[GFX-GEN] MC-PHASE = {self.mc_phy.now}")
+				bl.add(f"[GFX-GEN] MC-PHASE = {self.mc_phy.now}")
 				if self.mcm_old.now:
 					if self.bmm.now | mc_flag:
 						if self.mc_phy.now == 0:
@@ -279,8 +284,8 @@ class GraphicsGen(Entity):
 				bl.add(f"    {mode.dump}")
 				bl.add("[GFX-GEN] Is Background:")
 				bl.add(f"    {gfx_bgnd.dump}")
-#				bl.add("[GFX-GEN] Xscroll:")
-#				bl.add(f"    {self.xscroll.now.dump}")
+				bl.add("[GFX-GEN] Xscroll:")
+				bl.add(f"    {self.xscroll.now.dump}")
 
 		if self.i_rst.now:
 			pass
