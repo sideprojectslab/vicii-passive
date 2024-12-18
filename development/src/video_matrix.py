@@ -93,7 +93,6 @@ class VideoMatrix(Entity):
 					self.ram_radd.nxt <<= self.ram_radd.now + 1
 
 			if (self.i_strb.now == 7):
-
 				# just driving the pipeline
 				self.o_en.nxt <<= self.o_en.now
 				self.o_gg.nxt <<= self.o_gg.now

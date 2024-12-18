@@ -31,14 +31,22 @@ import bus_logger as bl
 
 class Sprites(Entity):
 	def __init__(self):
-		self.i_clk     = Input (Wire())
-		self.i_rst     = Input (Wire())
-		self.i_strb    = Input (t_vic_strb)
-		self.i_en      = Input (Wire())
-		self.i_vbrd    = Input (Wire())
-		self.i_regs    = Input (t_vic_regs)
-		self.i_grfx    = Input (t_vic_grfx)
-		self.i_data    = Input (t_vic_data)
+		self.i_clk     = Input(Wire())
+		self.i_rst     = Input(Wire())
+		self.i_specs   = Input(VicSpecs(H63))
+		self.i_regs    = Input(t_vic_regs)
+		self.i_strb    = Input(t_vic_strb)
+		self.i_cycl    = Input(t_vic_cycl)
+		self.i_xpos    = Input(t_vic_ppos)
+		self.i_ypos    = Input(t_vic_ppos)
+		self.i_data    = Input(t_vic_data)
+		self.i_en      = Input(Wire())
+		self.frame     = Input(Wire())
 
-		self.o_bgnd    = Output(Wire())
+		self.o_prio    = Output(Wire())
 		self.o_colr    = Output(t_vic_colr)
+
+	def _run(self):
+
+		if self.i_clk.posedge():
+			pass
