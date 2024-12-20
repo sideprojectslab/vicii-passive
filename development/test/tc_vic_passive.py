@@ -81,7 +81,7 @@ class VicTest(Entity):
 		yield from posedge(self.clk)
 		self.rst.nxt <<= 0
 
-		for _ in range(2):
+		for f in range(2):
 			for l in self.lines:
 				yield from posedge(self.clk)
 				line_val = int(l.split()[1])

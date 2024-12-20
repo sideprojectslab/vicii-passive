@@ -58,6 +58,9 @@ class GraphicsMux(Entity):
 		self.xval        = Signal(t_vic_ppos)
 		self.yval        = Signal(t_vic_ppos)
 
+		self.bord_actv   = Signal(Wire()    , ppl=8)
+		self.bord_colr   = Signal(t_vic_colr, ppl=1)
+
 
 	def _run(self):
 
@@ -69,13 +72,17 @@ class GraphicsMux(Entity):
 
 			if not (self.i_strb.now[0]):
 
+				# driving the pipeline
+				self.bord_actv.nxt <<= self.i_bord_actv.now
+				self.bord_colr.nxt <<= self.i_bord_colr.now
+
 				self.o_lstr.nxt <<= 0
 				self.o_lend.nxt <<= 0
 
-				if self.i_bord_actv.now:
-					self.o_colr.nxt <<= self.i_bord_colr.now
+				if self.bord_actv.now:
+					self.o_colr.nxt <<= self.bord_colr.now
 				else:
-					if ((self.i_sprt_actv.now == 0                              ) or
+					if ((self.i_sprt_actv.now == 0                                  ) or
 					    ((self.i_sprt_prio.now == 0) and (self.i_grfx_bgnd.now == 0))):
 						self.o_colr.nxt <<= self.i_grfx_colr.now
 					else:

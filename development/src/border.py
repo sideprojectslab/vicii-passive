@@ -29,9 +29,6 @@ from registers import *
 
 import bus_logger as bl
 
-PPL_BORD = 9
-PPL_COLR = 2
-
 class Border(Entity):
 	def __init__(self):
 		self.i_specs = Input (t_vic_specs_h63)
@@ -42,9 +39,9 @@ class Border(Entity):
 		self.i_xpos  = Input (t_vic_ppos)
 		self.i_ypos  = Input (t_vic_ppos)
 		self.i_regs  = Input (t_vic_regs)
-		self.o_vbrd  = Output(Wire(), ppl=PPL_BORD - 4)
-		self.o_bord  = Output(Wire(), ppl=PPL_BORD)
-		self.o_colr  = Output(t_vic_colr, ppl=PPL_COLR)
+		self.o_vbrd  = Output(Wire())
+		self.o_bord  = Output(Wire())
+		self.o_colr  = Output(t_vic_colr)
 
 		self.ff_main = Signal(Wire())
 		self.ff_vert = Signal(Wire())
@@ -68,10 +65,6 @@ class Border(Entity):
 
 
 			if self.i_strb.now[0]:
-
-				self.o_colr.nxt <<= self.o_colr.now
-				self.o_bord.nxt <<= self.o_bord.now
-
 				# vertical ff control
 				if (self.i_cycl.now == specs.CYCLE_YFF):
 					if (self.i_ypos.now == edge_lo):

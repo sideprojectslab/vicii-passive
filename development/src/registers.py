@@ -63,3 +63,54 @@ class Registers(Entity):
 
 			if self.i_rst.now:
 				self.wen.nxt <<= 0
+
+
+	def _reset(self):
+		# these values were dumped from a real VIC during the register timing test
+		self.o_regs.nxt[0 ] <<= 56
+		self.o_regs.nxt[1 ] <<= 91
+		self.o_regs.nxt[2 ] <<= 56
+		self.o_regs.nxt[3 ] <<= 99
+		self.o_regs.nxt[4 ] <<= 56
+		self.o_regs.nxt[5 ] <<= 107
+		self.o_regs.nxt[6 ] <<= 56
+		self.o_regs.nxt[7 ] <<= 115
+		self.o_regs.nxt[8 ] <<= 56
+		self.o_regs.nxt[9 ] <<= 123
+		self.o_regs.nxt[10] <<= 56
+		self.o_regs.nxt[11] <<= 131
+		self.o_regs.nxt[12] <<= 56
+		self.o_regs.nxt[13] <<= 139
+		self.o_regs.nxt[14] <<= 56
+		self.o_regs.nxt[15] <<= 147
+		self.o_regs.nxt[16] <<= 0
+		self.o_regs.nxt[17] <<= 15
+		self.o_regs.nxt[18] <<= 55
+		self.o_regs.nxt[19] <<= 0
+		self.o_regs.nxt[20] <<= 0
+		self.o_regs.nxt[21] <<= 255
+		self.o_regs.nxt[22] <<= 8
+		self.o_regs.nxt[23] <<= 0
+		self.o_regs.nxt[24] <<= 28
+		self.o_regs.nxt[25] <<= 15
+		self.o_regs.nxt[26] <<= 0
+		self.o_regs.nxt[27] <<= 0
+		self.o_regs.nxt[28] <<= 128
+		self.o_regs.nxt[29] <<= 255
+		self.o_regs.nxt[30] <<= 0
+		self.o_regs.nxt[31] <<= 0
+		self.o_regs.nxt[32] <<= 11
+		self.o_regs.nxt[33] <<= 0
+		self.o_regs.nxt[34] <<= 8
+		self.o_regs.nxt[35] <<= 0
+		self.o_regs.nxt[36] <<= 0
+		self.o_regs.nxt[37] <<= 11
+		self.o_regs.nxt[38] <<= 11
+		self.o_regs.nxt[39] <<= 11
+		self.o_regs.nxt[40] <<= 11
+		self.o_regs.nxt[41] <<= 11
+		self.o_regs.nxt[42] <<= 11
+		self.o_regs.nxt[43] <<= 11
+		self.o_regs.nxt[44] <<= 11
+		self.o_regs.nxt[45] <<= 11
+		self.o_regs.nxt[46] <<= 11

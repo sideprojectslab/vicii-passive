@@ -42,7 +42,7 @@ class GraphicsGen(Entity):
 		self.i_vbrd    = Input (Wire())
 		self.i_regs    = Input (t_vic_regs)
 
-		self.i_en      = Input (Wire())
+		self.i_actv      = Input (Wire())
 		self.i_grfx    = Input (t_vic_grfx)
 		self.i_data    = Input (t_vic_data)
 
@@ -52,10 +52,11 @@ class GraphicsGen(Entity):
 		self.shreg     = Signal(Unsigned().bits(SHREG_LEN))
 		self.xscroll   = Signal(Unsigned().upto(7))
 
-		self.en_1r     = Signal(Wire()    , ppl=1)
+		self.vbrd_1r   = Signal(Wire()    , ppl=4)
+		self.actv_1r   = Signal(Wire()    , ppl=1)
 		self.grfx_1r   = Signal(t_vic_grfx, ppl=1)
 		self.data_1r   = Signal(t_vic_data, ppl=1)
-		self.data_2r   = Signal(t_vic_data)
+		self.data_3r   = Signal(t_vic_data)
 		self.mc_phy    = Signal(Wire())
 
 		self.bg_colr   = Signal(Array([t_vic_colr]*4), ppl=1)
@@ -106,30 +107,32 @@ class GraphicsGen(Entity):
 				#                    LATCHING NEW CHARACTER                    #
 				################################################################
 
+				# driving the pipeline
+				self.vbrd_1r.nxt <<= self.i_vbrd.now
+
 				if (self.i_strb.now == 15):
 
 					# just advancing the pipeline
-					self.en_1r.nxt   <<= self.en_1r.tip
+					self.actv_1r.nxt <<= self.actv_1r.tip
 					self.grfx_1r.nxt <<= self.grfx_1r.tip
 					self.data_1r.nxt <<= self.data_1r.tip
 
-					if self.i_en.now and not self.i_vbrd.now:
+					if self.i_actv.now and not self.vbrd_1r.now:
 						self.xscroll.nxt <<= self.i_regs.now[22][3:0]
 
-					if self.i_en.now:
+					if self.i_actv.now:
 						self.grfx_1r.nxt <<= self.i_grfx.now
 						self.data_1r.nxt <<= self.i_data.now
-						self.en_1r  .nxt <<= 1
+						self.actv_1r.nxt <<= 1
 					else:
 						self.data_1r.nxt <<= 0
-						self.en_1r  .nxt <<= 0
+						self.actv_1r.nxt <<= 0
 
 				################################################################
 				#                     LATCHING MODE FLAGS                      #
 				################################################################
 
-				self.mc_phy.nxt  <<= not self.mc_phy.tip
-				self.mcm_old.nxt <<= self.mcm_old.tip
+				self.mc_phy.nxt  <<= not self.mc_phy.now
 
 				# intentionally delaying the video mode selection flags
 				# (see signal pipeline values)
@@ -165,13 +168,13 @@ class GraphicsGen(Entity):
 					# resetting the multi-color phase if data is enabled or by a
 					# small amount into the right border. To be seen because it
 					# seems a little too "ad-hoc" as a fix
-					if self.en_1r.now or (self.i_strb.now < 7):
+					if self.actv_1r.now or (self.i_strb.now < 7):
 						self.mc_phy.nxt <<= 0
 
-					if self.en_1r.now and not self.i_vbrd.now:
+					if self.actv_1r.now and not self.vbrd_1r.now:
 						bl.add("[GFX-GEN] Loading Shift Register")
 						# latching delayed data
-						self.data_2r.nxt <<= self.data_1r.now
+						self.data_3r.nxt <<= self.data_1r.now
 						# loading the shift registers
 						self.shreg.nxt[8:0] <<= self.grfx_1r.now
 
@@ -185,7 +188,7 @@ class GraphicsGen(Entity):
 				self.bg_colr.nxt[3] <<= self.i_regs.now[36][4:0]
 
 				# pixel value selection is based on delayed mode flags
-				mc_flag <<= self.data_2r.now[11]
+				mc_flag <<= self.data_3r.now[11]
 
 				bl.add(f"[GFX-GEN] MC-PHASE = {self.mc_phy.now}")
 				if self.mcm_old.now:
@@ -219,7 +222,7 @@ class GraphicsGen(Entity):
 				gfx_colr[2] <<= 0
 				gfx_colr[3] <<= 0
 
-				data_colr = self.data_2r.now
+				data_colr = self.data_3r.now
 
 				if (mode == MODE.STD_TEXT):
 					gfx_colr[0] <<= self.bg_colr.now[0]
@@ -272,25 +275,25 @@ class GraphicsGen(Entity):
 				#                           LOGGING                            #
 				################################################################
 
-				bl.add(f"[GFX-GEN] Data & GFX:")
-				bl.add(f"    {bin(data_colr)}")
-				bl.add(f"    {bin(gfx_val)}")
-				bl.add("[GFX-GEN] Graphics Colors:")
-				bl.add(f"    {bl.COLOR[gfx_colr[0]]}")
-				bl.add(f"    {bl.COLOR[gfx_colr[1]]}")
-				bl.add(f"    {bl.COLOR[gfx_colr[2]]}")
-				bl.add(f"    {bl.COLOR[gfx_colr[3]]}")
-				bl.add("[GFX-GEN] Background Colors:")
-				bl.add(f"    {bl.COLOR[self.bg_colr.now[0]]}")
-				bl.add(f"    {bl.COLOR[self.bg_colr.now[1]]}")
-				bl.add(f"    {bl.COLOR[self.bg_colr.now[2]]}")
-				bl.add(f"    {bl.COLOR[self.bg_colr.now[3]]}")
-				bl.add(f"[GFX-GEN] Video Mode:")
-				bl.add(f"    {mode.dump}")
-				bl.add("[GFX-GEN] Is Background:")
-				bl.add(f"    {gfx_bgnd.dump}")
-				bl.add("[GFX-GEN] Xscroll:")
-				bl.add(f"    {self.xscroll.now.dump}")
+#				bl.add(f"[GFX-GEN] Data & GFX:")
+#				bl.add(f"    {bin(data_colr)}")
+#				bl.add(f"    {bin(gfx_val)}")
+#				bl.add("[GFX-GEN] Graphics Colors:")
+#				bl.add(f"    {bl.COLOR[gfx_colr[0]]}")
+#				bl.add(f"    {bl.COLOR[gfx_colr[1]]}")
+#				bl.add(f"    {bl.COLOR[gfx_colr[2]]}")
+#				bl.add(f"    {bl.COLOR[gfx_colr[3]]}")
+#				bl.add("[GFX-GEN] Background Colors:")
+#				bl.add(f"    {bl.COLOR[self.bg_colr.now[0]]}")
+#				bl.add(f"    {bl.COLOR[self.bg_colr.now[1]]}")
+#				bl.add(f"    {bl.COLOR[self.bg_colr.now[2]]}")
+#				bl.add(f"    {bl.COLOR[self.bg_colr.now[3]]}")
+#				bl.add(f"[GFX-GEN] Video Mode:")
+#				bl.add(f"    {mode.dump}")
+#				bl.add("[GFX-GEN] Is Background:")
+#				bl.add(f"    {gfx_bgnd.dump}")
+#				bl.add("[GFX-GEN] Xscroll:")
+#				bl.add(f"    {self.xscroll.now.dump}")
 
 		if self.i_rst.now:
 			pass

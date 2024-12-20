@@ -68,12 +68,10 @@ class VideoMatrix(Entity):
 					if (self.i_cycl.now == CYCL_REF):
 						self.ram.nxt[self.ram_wadd.now] <<= self.i_db.now
 						self.count_line.nxt <<= 0
-						pass
 
 					elif (self.ram_wadd.now < RAM_LEN - 1):
 						# same, but without resetting the line counter
 						self.ram.nxt[self.ram_wadd.now] <<= self.i_db.now
-						pass
 				else:
 					if (self.i_cycl.now == CYCL_REF) and (self.count_line.now != 8):
 						self.count_line.nxt <<= self.count_line.now + 1
@@ -93,11 +91,6 @@ class VideoMatrix(Entity):
 					self.ram_radd.nxt <<= self.ram_radd.now + 1
 
 			if (self.i_strb.now == 7):
-				# just driving the pipeline
-				self.o_en.nxt <<= self.o_en.now
-				self.o_gg.nxt <<= self.o_gg.now
-				self.o_cc.nxt <<= self.o_cc.now
-
 				if ((self.count_cycl.now != RAM_LEN) and
 				    (self.i_ypos.now >= specs.yfvc ) and
 				    (self.i_ypos.now <= specs.ylvc )):

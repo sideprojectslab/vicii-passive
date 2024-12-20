@@ -114,7 +114,7 @@ class FrameRenderXl(Entity):
 				fill = PatternFill(start_color=color, end_color=color, fill_type='solid')
 				alignment = Alignment(horizontal="left", vertical="top")
 
-				if (self.ypos >= 172) and (self.ypos < 220):
+				if (self.ypos >= 50) and (self.ypos <= 70):
 					self.sh.cell(row=self.ypos+1, column=self.xpos+1, value= "     \n" + "\n".join(bl.log))
 				self.sh.cell(row=self.ypos+1, column=self.xpos+1).fill = fill
 				self.sh.cell(row=self.ypos+1, column=self.xpos+1).font = font
