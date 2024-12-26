@@ -61,6 +61,10 @@ class GraphicsMux(Entity):
 		self.bord_actv   = Signal(Wire()    , ppl=8)
 		self.bord_colr   = Signal(t_vic_colr, ppl=1)
 
+		self.sprt_actv   = Signal(Wire()    , ppl=1)
+		self.sprt_prio   = Signal(Wire()    , ppl=1)
+		self.sprt_colr   = Signal(t_vic_colr, ppl=1)
+
 
 	def _run(self):
 
@@ -72,6 +76,10 @@ class GraphicsMux(Entity):
 
 			if not (self.i_strb.now[0]):
 
+				self.sprt_actv.nxt <<= self.i_sprt_actv.now
+				self.sprt_prio.nxt <<= self.i_sprt_prio.now
+				self.sprt_colr.nxt <<= self.i_sprt_colr.now
+
 				# driving the pipeline
 				self.bord_actv.nxt <<= self.i_bord_actv.now
 				self.bord_colr.nxt <<= self.i_bord_colr.now
@@ -82,11 +90,11 @@ class GraphicsMux(Entity):
 				if self.bord_actv.now:
 					self.o_colr.nxt <<= self.bord_colr.now
 				else:
-					if ((self.i_sprt_actv.now == 0                                  ) or
-					    ((self.i_sprt_prio.now == 0) and (self.i_grfx_bgnd.now == 0))):
+					if ((self.sprt_actv.now == 0                                  ) or
+					    ((self.sprt_prio.now == 0) and (self.i_grfx_bgnd.now == 0))):
 						self.o_colr.nxt <<= self.i_grfx_colr.now
 					else:
-						self.o_colr.nxt <<= self.i_sprt_colr.now
+						self.o_colr.nxt <<= self.sprt_colr.now
 
 				if self.g_mark_lines:
 					if ((self.i_xpos.now >= specs.xnul) and (self.i_xpos.now <= specs.xnul + 16) and

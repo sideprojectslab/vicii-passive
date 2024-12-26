@@ -43,11 +43,11 @@ class VicSpecs(HwType):
 
 		if version == H63:
 			self.cycl = 63       # number of character cycles in a line
+			self.xlen = 504      # number of pixels in a line
+			self.xres = 503      # visible pixels in a line
 			self.xref = 16       # value of xpos on the 1st clock cycle of the 1st character access after the refresh pattern
 			self.xnul = 480 + 5  # solely needed to center the picture
-			self.xend = 380 + 5  # ((xnul + xres) % xlen) - 1
-			self.xlen = 504      # number of pixels in a line
-			self.xres = 404      # visible pixels in a line
+			self.xend = 478 + 5  # ((xnul + xres) % xlen) - 1
 			self.xfvc = 24       # first video coordinate (after border)
 			self.xlvc = 24 + 319 # last video coordinate  (before border)
 

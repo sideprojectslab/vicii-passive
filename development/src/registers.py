@@ -49,9 +49,8 @@ class Registers(Entity):
 
 			if (self.i_strb.now == 10):
 				self.a_tmp.nxt <<= self.i_a.now
-
-			if (self.i_strb.now == 13) and (self.i_cs.now == 0) and (self.i_rw.now == 0):
-				self.wen.nxt <<= 1
+				if (self.i_cs.now == 0) and (self.i_rw.now == 0):
+					self.wen.nxt <<= 1
 
 			if (self.i_strb.now == 14):
 				self.d_tmp.nxt <<= self.i_db.now[8:0]

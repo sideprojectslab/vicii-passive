@@ -172,7 +172,7 @@ class GraphicsGen(Entity):
 						self.mc_phy.nxt <<= 0
 
 					if self.actv_1r.now and not self.vbrd_1r.now:
-						bl.add("[GFX-GEN] Loading Shift Register")
+						# bl.add("[GFX-GEN] Loading Shift Register")
 						# latching delayed data
 						self.data_3r.nxt <<= self.data_1r.now
 						# loading the shift registers
@@ -190,7 +190,7 @@ class GraphicsGen(Entity):
 				# pixel value selection is based on delayed mode flags
 				mc_flag <<= self.data_3r.now[11]
 
-				bl.add(f"[GFX-GEN] MC-PHASE = {self.mc_phy.now}")
+				# bl.add(f"[GFX-GEN] MC-PHASE = {self.mc_phy.now}")
 				if self.mcm_old.now:
 					if self.bmm.now | mc_flag:
 						if self.mc_phy.now == 0:

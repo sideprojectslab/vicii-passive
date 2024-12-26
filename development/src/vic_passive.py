@@ -134,9 +134,6 @@ class VicPassive(Entity):
 		self.e_sprites.i_ypos    <<= self.e_sync.o_ypos
 		self.e_sprites.i_data    <<= self.i_db
 
-		self.e_sprites.i_en .nxt <<= 1
-		self.e_sprites.frame.nxt <<= 1
-
 		# graphics mux
 		self.e_gfx_mux = GraphicsMux(g_mark_lines = False)
 		self.e_gfx_mux.i_clk       <<= self.i_clk
