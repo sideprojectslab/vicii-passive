@@ -45,6 +45,7 @@ class VideoMatrix(Entity):
 		self.o_gg       = Output(t_vic_grfx)
 		self.o_en       = Output(Wire()    )
 
+		self.idle       = Signal(Wire())
 		self.ram        = Signal(Array([t_vic_data]*RAM_LEN))
 		self.ram_wadd   = Signal(Unsigned().span(RAM_LEN))
 		self.ram_radd   = Signal(Unsigned().span(RAM_LEN))
@@ -68,14 +69,17 @@ class VideoMatrix(Entity):
 					if (self.i_cycl.now == CYCL_REF):
 						self.ram.nxt[self.ram_wadd.now] <<= self.i_db.now
 						self.count_line.nxt <<= 0
+						self.idle.nxt       <<= 0
 
 					elif (self.ram_wadd.now < RAM_LEN - 1):
 						# same, but without resetting the line counter
 						self.ram.nxt[self.ram_wadd.now] <<= self.i_db.now
-				else:
-					if (self.i_cycl.now == CYCL_REF) and (self.count_line.now != 8):
-						self.count_line.nxt <<= self.count_line.now + 1
 
+				if (self.i_cycl.now == 57):
+					if (self.count_line.now != 7):
+						self.count_line.nxt <<= self.count_line.now + 1
+					else:
+						self.idle.nxt <= 1
 
 			# start video matrix read soon enough for the data to be available
 			# when it needs to be produced on the output
@@ -108,12 +112,16 @@ class VideoMatrix(Entity):
 					self.o_gg.nxt <<= 0
 					self.o_cc.nxt <<= 0
 
+				if self.idle.now:
+					self.o_cc.nxt <<= 0
+
 			if self.i_rst.now:
 				for i in range(RAM_LEN):
 					self.ram.nxt[i] <<= 0
 				self.o_en.nxt <<= 0
 				self.o_gg.nxt <<= 0
 				self.o_cc.nxt <<= 0
+				self.idle.nxt <<= 1
 
 
 	def _rst(self):

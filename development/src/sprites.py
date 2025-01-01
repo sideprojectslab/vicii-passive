@@ -47,7 +47,10 @@ class Sprites(Entity):
 
 		# signals
 
-		self.cycl_ref  = Signal(Unsigned().upto(65))
+		self.dma1_cycl = Signal(Unsigned().upto(65))
+		self.dma2_cycl = Signal(Unsigned().upto(65))
+		self.yexp_cycl = Signal(Unsigned().upto(65))
+		self.strt_cycl = Signal(Unsigned().upto(65))
 		self.acquire   = Signal(Wire())
 
 		self.spen      = Signal(Unsigned().bits(8))
@@ -82,8 +85,12 @@ class Sprites(Entity):
 
 	def _run(self):
 
-		# this will be added to the specs soon
-		self.cycl_ref.nxt <<= 57
+		# these will be added to the specs soon, at the moment these represent
+		# the correct settings for PAL machines
+		self.dma1_cycl.nxt <<= 54
+		self.dma2_cycl.nxt <<= 55
+		self.yexp_cycl.nxt <<= 55
+		self.strt_cycl.nxt <<= 57
 
 		if self.i_clk.posedge():
 
@@ -193,17 +200,19 @@ class Sprites(Entity):
 							if self.yincr.now[i]:
 								self.count_ylen.nxt[i] <<= self.count_ylen.now[i] + 1
 
-					if (self.i_strb.now == 1) and ((self.i_cycl.now == 54) or (self.i_cycl.now == 55)):
+					if (self.i_strb.now == 1) and ((self.i_cycl.now == self.dma1_cycl.now) or (self.i_cycl.now == self.dma2_cycl.now)):
 						if (not self.spdma.now[i]) and self.spen.now[i] and (self.ypos.now[i] == self.i_ypos.now[8:0]):
 							self.spdma.nxt[i]      <<= 1
 							self.yincr.nxt[i]      <<= 1
 							self.count_ylen.nxt[i] <<= 0
 
-					if (self.i_strb.now == 1) and (self.i_cycl.now == 55):
+					if (self.i_strb.now == 1) and (self.i_cycl.now == self.yexp_cycl.now):
 						if self.spdma.now[i] and self.yexp.now[i]:
 							self.yincr.nxt[i] <<= not self.yincr.now[i]
+						else:
+							self.yincr.nxt[i] <<= 1
 
-					if (self.i_strb.now == 1) and (self.i_cycl.now == 57):
+					if (self.i_strb.now == 1) and (self.i_cycl.now == self.strt_cycl.now):
 						if self.spdma.now[i]:
 							if self.spen.now[i] and (self.ypos.now[i] == self.i_ypos.now[8:0]):
 								self.ydisp.nxt[i] <<= 1 # non-blocking in kawari
@@ -214,7 +223,7 @@ class Sprites(Entity):
 				#                      SPRITE ACQUISITION                      #
 				################################################################
 
-				if (self.i_strb.now == 1) and (self.i_cycl.now == self.cycl_ref.now):
+				if (self.i_strb.now == 1) and (self.i_cycl.now == self.strt_cycl.now):
 					# initiate sprite data acquisition on all lines
 					self.count_sprt.nxt <<= 0
 					self.count_data.nxt <<= 3
