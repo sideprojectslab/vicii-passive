@@ -99,6 +99,7 @@ if __name__ == "__main__":
 	SimpleSim.vcd_path = get_abs_path("output/waves.vcd")
 	SimpleSim.vcd_timescale = "ns"
 	SimpleSim.vcd_live = False
+	SimpleSim.force_dump = True
 	testcase = VicTest()
 	SimpleSim.run(testcase)
 
